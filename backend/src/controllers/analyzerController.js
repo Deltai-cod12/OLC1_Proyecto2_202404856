@@ -1,5 +1,8 @@
 const parser = require('../gramatica/parser');
 const AnalizadorSemantico = require('../analizadorSemantico/analizador_semantico');
+const GraphvizGenerator = require('../graphviz/graphviz_generator'); // NUEVO
+
+const graphvizGenerator = new GraphvizGenerator(); // NUEVO
 
 const analyzeCode = (req, res) => {
   try {
@@ -67,7 +70,7 @@ const analyzeCode = (req, res) => {
       console.log('Análisis léxico y sintáctico completado');
       console.log('AST generado:', JSON.stringify(ast, null, 2));
       
-      //NUEVO: EJECUTAR ANÁLISIS SEMÁNTICO
+      // EJECUTAR ANÁLISIS SEMÁNTICO
       console.log('INICIANDO ANÁLISIS SEMÁNTICO Y EJECUCIÓN');
       let resultadoSemantico = null;
       
@@ -107,7 +110,7 @@ const analyzeCode = (req, res) => {
         message: 'Análisis completado exitosamente',
         tokens: tokensEncontrados,
         errors: errors,
-        ast: ast,
+        ast: ast, // ✅ AST incluido en la respuesta
         consoleOutput: [
           '✓ Análisis léxico completado',
           '✓ Análisis sintáctico completado',
@@ -118,7 +121,7 @@ const analyzeCode = (req, res) => {
           '--- SALIDA DE CONSOLA ---',
           ...salidaConsola.split('\n')
         ],
-        salidaConsola: salidaConsola //NUEVO: Salida específica para la consola
+        salidaConsola: salidaConsola
       };
 
       console.log('Respuesta enviada al frontend');
@@ -155,7 +158,7 @@ const analyzeCode = (req, res) => {
           `✗ Error en análisis: ${parseError.message}`,
           `✗ Errores encontrados: ${errors.length}`
         ],
-        salidaConsola: `Error de sintaxis: ${parseError.message}` //  NUEVO
+        salidaConsola: `Error de sintaxis: ${parseError.message}`
       };
 
       res.json(response);
@@ -180,13 +183,40 @@ const analyzeCode = (req, res) => {
         '✗ Error interno del servidor',
         '✗ No se pudo completar el análisis'
       ],
-      salidaConsola: `Error del servidor: ${error.message}` // NUEVO
+      salidaConsola: `Error del servidor: ${error.message}`
+    });
+  }
+};
+
+// NUEVO: Controlador para generar gráfico del AST
+const generateASTGraph = async (req, res) => {
+  try {
+    const { ast } = req.body;
+
+    if (!ast) {
+      return res.status(400).json({
+        success: false,
+        error: 'No se proporcionó AST para generar el gráfico'
+      });
+    }
+
+    console.log('🔄 Generando gráfico del AST...');
+
+    const result = await graphvizGenerator.generateASTImage(ast);
+    
+    console.log('✅ Gráfico del AST generado exitosamente');
+    res.json(result);
+
+  } catch (error) {
+    console.error('❌ Error generando gráfico AST:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 };
 
 // Función para generar tokens básicos desde el código cuando no podemos capturarlos del lexer
-// Función mejorada para generar tokens desde el código
 function generarTokensDesdeCodigo(codigo, tokensArray) {
   const lineas = codigo.split('\n');
   
@@ -237,9 +267,7 @@ function generarTokensDesdeCodigo(codigo, tokensArray) {
   });
 }
 
-// Función auxiliar para determinar el tipo de token - ACTUALIZADA PARA TU LENGUAJE
-// Función auxiliar para determinar el tipo de token - ACTUALIZADA Y COMPLETA
-// Función auxiliar para determinar el tipo de token - CORREGIDA PARA CADENAS
+// Función auxiliar para determinar el tipo de token
 function determinarTipoToken(token) {
   // Palabras reservadas básicas
   const palabrasReservadas = [
@@ -309,14 +337,13 @@ function determinarTipoToken(token) {
   else if (/^-?\d+\.\d+$/.test(token)) {
     return 'Número Decimal';
   } 
-  // Verificar cadenas de texto (entre comillas) - MEJORADO
+  // Verificar cadenas de texto (entre comillas)
   else if ((token.startsWith('"') && token.endsWith('"')) || 
            (token.startsWith("'") && token.endsWith("'"))) {
     return 'Cadena Texto';
   }
-  // Verificar cadenas que contienen espacios y texto - NUEVA VERIFICACIÓN
+  // Verificar cadenas que contienen espacios y texto
   else if (token.includes(' ') && /[a-zA-Z]/.test(token) && !/\d/.test(token)) {
-    // Esto captura texto sin comillas que pueda venir del lexer
     return 'Cadena Texto';
   }
   // Verificar identificadores
@@ -334,5 +361,6 @@ function determinarTipoToken(token) {
 }
 
 module.exports = {
-  analyzeCode
+  analyzeCode,
+  generateASTGraph // NUEVO: exportar la nueva función
 };
