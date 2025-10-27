@@ -18,6 +18,14 @@ class ContinueException extends Error {
     }
 }
 
+class ReturnException extends Error {
+    constructor(valor) {
+        super('Return');
+        this.name = 'ReturnException';
+        this.valor = valor;
+    }
+}
+
 class AnalizadorSemantico {
     constructor() {
         this.interprete = new Interprete();
@@ -43,6 +51,16 @@ class AnalizadorSemantico {
                 salida: this.salida.join('\n')
             };
         } catch (error) {
+            // NUEVO: Manejar ReturnException como terminación normal en contexto global
+            if (error instanceof ReturnException) {
+                console.log("Programa terminado por 'retornar'");
+                return { 
+                    exito: true, 
+                    mensaje: "Programa terminado por 'retornar'",
+                    salida: this.salida.join('\n')
+                };
+            }
+            
             return { 
                 exito: false, 
                 error: error.message,
@@ -240,6 +258,10 @@ class AnalizadorSemantico {
                     if (nodo.falseExpr) this.prepararNodos([nodo.falseExpr]);
                     break;
 
+                case 'ReturnStmt':
+                    nodo.evaluar = (entorno) => this.evaluarReturnStmt(nodo, entorno);
+                    if (nodo.value) this.prepararNodos([nodo.value]);
+                    break;
                     
                 default:
                     console.log(`Tipo de nodo no manejado: ${nodo.type}`);
@@ -573,7 +595,17 @@ class AnalizadorSemantico {
         
         if (nodo.statements && Array.isArray(nodo.statements)) {
             for (const sentencia of nodo.statements) {
-                ultimoResultado = this.evaluarNodo(sentencia, entorno);
+                try {
+                    ultimoResultado = this.evaluarNodo(sentencia, entorno);
+                } catch (error) {
+                    // NUEVO: Propagar ReturnException, BreakException y ContinueException
+                    if (error instanceof ReturnException || 
+                        error instanceof BreakException || 
+                        error instanceof ContinueException) {
+                        throw error;
+                    }
+                    throw error;
+                }
             }
         }
 
@@ -618,6 +650,10 @@ class AnalizadorSemantico {
                     // Continuar con la siguiente iteración
                     iteraciones++;
                     continue;
+                } else if (error instanceof ReturnException) {
+                    // NUEVO: Propagar ReturnException para salir de la función
+                    console.log(`RETORNAR encontrado en MIENTRAS, propagando...`);
+                    throw error;
                 } else {
                     // Relanzar otros errores
                     throw error;
@@ -659,6 +695,10 @@ class AnalizadorSemantico {
                     console.log(`CONTINUAR encontrado, siguiente iteración del HACER-HASTA-QUE`);
                     iteraciones++;
                     continue;
+                } else if (error instanceof ReturnException) {
+                    // NUEVO: Propagar ReturnException para salir de la función
+                    console.log(`RETORNAR encontrado en HACER-HASTA-QUE, propagando...`);
+                    throw error;
                 } else {
                     throw error;
                 }
@@ -731,6 +771,10 @@ class AnalizadorSemantico {
                     } else if (error instanceof ContinueException) {
                         console.log(`CONTINUAR encontrado, saltando a actualización`);
                         // Saltar al paso de actualización
+                    } else if (error instanceof ReturnException) {
+                        // NUEVO: Propagar ReturnException para salir de la función
+                        console.log(`RETORNAR encontrado en PARA, propagando...`);
+                        throw error;
                     } else {
                         throw error;
                     }
@@ -814,6 +858,98 @@ class AnalizadorSemantico {
         return { valor: null, tipo: 'void' };
     }
 
+    // NUEVO: Método para ejecutar llamadas a funciones (CORREGIDO)
+    evaluarFunctionCall(nodo, entorno) {
+        console.log(`Ejecutando función: ${nodo.callee}`);
+
+        // Buscar la función en el entorno
+        const simboloFuncion = entorno.obtener(nodo.callee);
+
+        if (!simboloFuncion || simboloFuncion.tipo !== 'funcion') {
+            throw new Error(`Función '${nodo.callee}' no definida`);
+        }
+
+        const funcion = simboloFuncion.valor;
+
+        // Evaluar argumentos
+        const argumentos = nodo.args ? 
+            nodo.args.map(arg => this.evaluarNodo(arg, entorno)) : [];
+
+        // Verificar número de parámetros
+        if (argumentos.length !== funcion.parametros.length) {
+            throw new Error(`Número incorrecto de argumentos para '${nodo.callee}'. Esperados: ${funcion.parametros.length}, Recibidos: ${argumentos.length}`);
+        }
+
+        // Crear nuevo entorno para la función
+        const entornoFuncion = new Entorno(entorno);
+        entornoFuncion.esFuncion = true; // NUEVO: Marcar como contexto de función
+
+        // Registrar parámetros en el nuevo entorno
+        for (let i = 0; i < funcion.parametros.length; i++) {
+            const parametro = funcion.parametros[i];
+            const argumento = argumentos[i];
+
+            // Verificar tipos de parámetros
+            if (parametro.tipo !== argumento.tipo) {
+                // Permitir conversión implícita de entero a decimal
+                if (parametro.tipo === 'decimal' && argumento.tipo === 'entero') {
+                    console.log(`Conversión implícita: ${argumento.valor} (entero) -> ${argumento.valor}.0 (decimal)`);
+                } else {
+                    throw new Error(`Tipo incorrecto para parámetro '${parametro.name}'. Esperado: ${parametro.tipo}, Recibido: ${argumento.tipo}`);
+                }
+            }
+
+            entornoFuncion.agregar(
+                parametro.name, 
+                new Simbolo(
+                    parametro.name, 
+                    parametro.tipo, 
+                    argumento.valor
+                )
+            );
+
+            console.log(`Parámetro '${parametro.name}' = ${argumento.valor} (${parametro.tipo})`);
+        }
+
+        // Configurar capturador de salida para la función
+        entornoFuncion.setCapturadorSalida((texto) => {
+            this.capturarSalida(texto);
+        });
+
+        // Ejecutar el cuerpo de la función con manejo de retorno
+        console.log(`Ejecutando cuerpo de la función '${nodo.callee}'`);
+        try {
+            const resultado = this.evaluarNodo(funcion.body, entornoFuncion);
+
+            // Si llegamos aquí, no hubo retorno explícito
+            if (funcion.returnType !== 'void') {
+                throw new Error(`Función '${nodo.callee}' debe retornar un valor de tipo ${funcion.returnType}`);
+            }
+
+            console.log(`Función '${nodo.callee}' ejecutada sin retorno explícito`);
+            return { valor: null, tipo: 'void' };
+
+        } catch (error) {
+            if (error instanceof ReturnException) {
+                // Verificar que el tipo de retorno coincida
+                if (funcion.returnType !== 'void' && error.valor.tipo !== funcion.returnType) {
+                    // Permitir conversión implícita de entero a decimal
+                    if (!(funcion.returnType === 'decimal' && error.valor.tipo === 'entero')) {
+                        throw new Error(`Tipo de retorno incorrecto en '${nodo.callee}'. Esperado: ${funcion.returnType}, Obtenido: ${error.valor.tipo}`);
+                    }
+                }
+
+                console.log(`Función '${nodo.callee}' retornó: ${error.valor.valor} (${error.valor.tipo})`);
+                return error.valor;
+
+            } else if (error instanceof BreakException || error instanceof ContinueException) {
+                throw new Error(`'${error.name}' no permitido fuera de ciclos`);
+            } else {
+                throw error;
+            }
+        }
+    }
+
     evaluarExecuteCall(nodo, entorno) {
         console.log(`Ejecutando procedimiento con EJECUTAR: ${nodo.callee}`);
         
@@ -837,6 +973,7 @@ class AnalizadorSemantico {
         
         // Crear nuevo entorno para el procedimiento
         const entornoProcedimiento = new Entorno(entorno);
+        entornoProcedimiento.esFuncion = true; // NUEVO: Marcar como contexto de función/procedimiento
         
         // Registrar parámetros en el nuevo entorno
         for (let i = 0; i < procedimiento.parametros.length; i++) {
@@ -877,7 +1014,11 @@ class AnalizadorSemantico {
             console.log(`Procedimiento '${nodo.callee}' ejecutado exitosamente`);
             return { valor: null, tipo: 'void' }; // Los procedimientos no retornan valor
         } catch (error) {
-            if (error instanceof BreakException || error instanceof ContinueException) {
+            if (error instanceof ReturnException) {
+                // NUEVO: Procedimientos pueden usar retornar sin valor
+                console.log(`Procedimiento '${nodo.callee}' terminado por retornar`);
+                return { valor: null, tipo: 'void' };
+            } else if (error instanceof BreakException || error instanceof ContinueException) {
                 throw new Error(`'${error.name}' no permitido fuera de ciclos`);
             }
             throw error;
@@ -901,13 +1042,16 @@ class AnalizadorSemantico {
                 type: 'ExecuteCall'
             }, entorno);
         } else if (simbolo.tipo === 'funcion') {
-            // Aquí puedes implementar la llamada a funciones más adelante
-            throw new Error(`Llamada a función '${nodo.callee}' no implementada aún`);
+            return this.evaluarFunctionCall({
+                callee: nodo.callee,
+                args: nodo.args,
+                type: 'Call'
+            }, entorno);
         } else {
             throw new Error(`'${nodo.callee}' no es un procedimiento o función`);
         }
     }
-
+    
     evaluarParamDecl(nodo, entorno) {
         // Los parámetros se evalúan cuando se ejecuta la llamada al procedimiento/función
         // Este método solo retorna información del parámetro
@@ -1250,6 +1394,23 @@ class AnalizadorSemantico {
         
         console.log(`Ternario resultado: ${resultado.valor} (${resultado.tipo})`);
         return resultado;
+    }
+
+    // NUEVO: Evaluar RETORNAR (CORREGIDO)
+    evaluarReturnStmt(nodo, entorno) {
+        console.log(`Ejecutando retornar`);
+
+        let valorRetorno = { valor: null, tipo: 'void' };
+
+        if (nodo.value) {
+            valorRetorno = this.evaluarNodo(nodo.value, entorno);
+            console.log(`Retornando: ${valorRetorno.valor} (${valorRetorno.tipo})`);
+        } else {
+            console.log(`Retornando sin valor`);
+        }
+
+        // Lanzar excepción para interrumpir el flujo
+        throw new ReturnException(valorRetorno);
     }
 }
 
