@@ -11,7 +11,7 @@ class Print extends Instruccion {
         const resultado = this.expresion.evaluar(entorno);
         const textoSalida = String(resultado.valor);
         
-        // En lugar de console.log, usar un método para capturar la salida
+        // En lugar de console.log, usar un metodo para capturar la salida
         if (typeof entorno.capturarSalida === 'function') {
             entorno.capturarSalida(textoSalida);
         } else {

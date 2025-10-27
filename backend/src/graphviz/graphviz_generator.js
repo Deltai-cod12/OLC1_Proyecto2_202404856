@@ -24,7 +24,7 @@ class GraphvizGenerator {
     let nodeId = 0;
     const nodeMap = new Map();
 
-    // Función recursiva para procesar nodos
+    // Funcion recursiva para procesar nodos
     const processNode = (node, parentId = null, edgeLabel = '') => {
       if (!node || typeof node !== 'object') return;
 
@@ -55,7 +55,7 @@ class GraphvizGenerator {
         dotCode += `  node${parentId} -> node${currentNodeId}${edge};\n`;
       }
 
-      // Procesar hijos recursivamente según la estructura del AST
+      // Procesar hijos recursivamente segun la estructura del AST
       const processChild = (child, label = '') => {
         if (child && typeof child === 'object') {
           processNode(child, currentNodeId, label);
@@ -100,7 +100,7 @@ class GraphvizGenerator {
       }
     };
 
-    // Procesar el nodo raíz
+    // Procesar el nodo raiz
     if (ast.body && Array.isArray(ast.body)) {
       ast.body.forEach((node, index) => processNode(node, null, `body[${index}]`));
     } else {
@@ -114,7 +114,7 @@ class GraphvizGenerator {
   async generateASTImage(ast) {
     return new Promise((resolve, reject) => {
       try {
-        // Generar código DOT
+        // Generar codigo DOT
         const dotCode = this.generateDotFromAST(ast);
         
         // Crear archivos temporales

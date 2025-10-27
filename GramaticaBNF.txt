@@ -1,0 +1,127 @@
+PROGRAMA Y DECLARACIONES GLOBALRES
+
+Programa ::= ListaDeclaracionesGlobales EOF
+ListaDeclaracionesGlobales ::= ε | ListaDeclaracionesGlobales DeclaracionGlobal
+DeclaracionGlobal ::= Sentencia | DeclaracionProcedimiento | DeclaracionFuncion | DeclaracionObjeto | MetodoObjeto
+
+SENTENCIAS Y ESTRUCTURAS DE CONTROL
+Sentencia ::= Declaracion ";" | Asignacion ";" | Incremento ";" | Llamada ";" | EjecutarMetodo
+    | ImprimirStmt ";" | SiSentencia | MientrasSentencia | ParaSentencia | HacerHastaSentencia
+    | DetenerSentencia | ContinuarSentencia | RetornarSentencia | InstanciacionObjeto
+
+ListaSentencias ::= ε | ListaSentencias Sentencia
+Bloque ::= "{" ListaSentencias "}" | Sentencia
+
+ESTRUCTURAS CONDICIONALES
+SiSentencia ::= "si" "(" Expresion ")" Bloque OptionalOSi OptionalDeLoContrario
+OptionalOSi ::= ε | ListaOSi
+OptionalDeLoContrario ::= ε | "de lo contrario" Bloque
+ListaOSi ::= OSI | ListaOSi OSI
+OSI ::= "o" "si" "(" Expresion ")" Bloque
+
+ESTRUCTURAS CICLICAS
+
+MientrasSentencia ::= "mientras" "(" Expresion ")" Bloque
+HacerHastaSentencia ::= "hacer" Bloque "hasta" "que" "(" Expresion ")"
+ParaSentencia ::= "para" "(" ParaInicializacion ";" Expresion ";" ParaActualizacion ")" Bloque
+ParaInicializacion ::= DeclaracionParaVar | AsignacionPara | ε
+ParaActualizacion ::= ID "=" Expresion | Incremento | ε
+DeclaracionParaVar ::= TipoSimple ID "con valor" Expresion
+AsignacionPara ::= ID "=" Expresion
+
+DECLARACION DE VARIABLES
+
+Declaracion ::= DeclaracionVariable | DeclaracionVector
+DeclaracionVariable ::= TipoSimple ListaIDs | TipoSimple ListaIDs "=" ListaExpresiones | TipoSimple ListaIDs "con valor" ListaExpresiones
+ListaIDs ::= ID | ListaIDs "," ID
+
+VECTORES 1D Y 2D
+
+DeclaracionVector ::= TipoBase "[" "]" ID "=" "vector" TipoBase "[" Expresion "]"
+    | TipoBase "[" "]" "[" "]" ID "=" "vector" TipoBase "[" Expresion "]" "[" Expresion "]"
+    | TipoBase "[" "]" ID "=" "[" ListaExpresiones "]"
+    | TipoBase "[" "]" "[" "]" ID "=" "[" ListaFilas "]"
+ListaFilas ::= "[" ListaExpresiones "]" | ListaFilas "," "[" ListaExpresiones "]"
+
+PROCEDIMIENTOS Y FUNCIONES
+
+DeclaracionProcedimiento ::= "procedimiento" ID "(" ")" Bloque | "procedimiento" ID "(" ListaParametros ")" Bloque
+DeclaracionFuncion ::= "funcion" TipoSimple ID "(" ")" Bloque | "funcion" TipoSimple ID "(" ListaParametros ")" Bloque
+ListaParametros ::= ParametroDeclara | ListaParametros "," ParametroDeclara
+ParametroDeclara ::= TipoSimple ID | TipoSimple ID "=" Expresion
+
+OBJETOS
+
+DeclaracionObjeto ::= "objeto" ID "(" ListaAtributos ")" ListaMetodosObjeto | "objeto" ID "(" ListaAtributos ")"
+ListaAtributos ::= ε | ListaAtributos Atributo
+Atributo ::= ID TipoSimple
+ListaMetodosObjeto ::= ε | ListaMetodosObjeto MetodoObjeto
+MetodoObjeto ::= ID "con metodo" ID "(" ")" Bloque | ID "con metodo" ID "(" ListaParametros ")" Bloque
+InstanciacionObjeto ::= "ingresar objeto" ID ID "->" ID "(" ListaExpresiones ")" | "ingresar objeto" ID ID "->" ID "(" ")"
+EjecutarMetodo ::= "ejecutar" Acceso "." ID "(" Argumentos ")"
+
+EXPRESIONES SEGUN ORDEN DE PRECEDENCIA
+
+Expresion ::= Expresion "||" Expresion | ExpresionComparacion
+ExpresionComparacion ::= ExpresionComparacion "==" ExpresionAditiva | ExpresionComparacion "!=" ExpresionAditiva
+    | ExpresionComparacion "<" ExpresionAditiva | ExpresionComparacion "<=" ExpresionAditiva
+    | ExpresionComparacion ">" ExpresionAditiva | ExpresionComparacion ">=" ExpresionAditiva
+    | ExpresionAditiva
+
+ExpresionAditiva ::= ExpresionAditiva "+" ExpresionMultiplicativa | ExpresionAditiva "-" ExpresionMultiplicativa | ExpresionMultiplicativa
+ExpresionMultiplicativa ::= ExpresionMultiplicativa "*" ExpresionExponencial | ExpresionMultiplicativa "/" ExpresionExponencial
+    | ExpresionMultiplicativa "%" ExpresionExponencial | ExpresionExponencial
+
+ExpresionExponencial ::= ExpresionExponencial "^" ExpresionUnaria | ExpresionUnaria
+ExpresionUnaria ::= "!" ExpresionUnaria | "-" ExpresionUnaria | ExpresionTernaria
+ExpresionTernaria ::= Expresion "?" Expresion ":" ExpresionTernaria | CastExpr
+
+CASTS Y EXPRESIONES PRIMARIAS
+
+CastExpr ::= "(entero)" CastExpr | "(decimal)" CastExpr | "(caracter)" CastExpr | "(cadena)" CastExpr
+    | "tolower" "(" Expresion ")" | "toupper" "(" Expresion ")" | "(" Expresion ")" | Primary
+
+Primary ::= NUMBER | DECIMAL | STRING | CHAR | "verdadero" | "falso" | Acceso | Llamada
+
+ACCESO Y LLAMADAS
+
+Acceso ::= ID | Acceso "." ID | Acceso "[" Expresion "]" | Acceso "[" Expresion "]" "[" Expresion "]"
+Incremento ::= Acceso "++" | Acceso "--"
+Asignacion ::= Acceso "=" Expresion
+
+LLAMADAS A FUNCIONES Y METODOS
+
+Llamada ::= "ejecutar" ID "(" Argumentos ")" | ID "(" Argumentos ")" | Acceso "." ID "(" Argumentos ")"
+    | Acceso "(" Argumentos ")" | ID "(" ListaExpresiones ")"
+Argumentos ::= ε | ListaExpresiones
+ListaExpresiones ::= Expresion | ListaExpresiones "," Expresion
+
+SENTENCIAS DE TRANSFERENCIA DE IMPRESION
+
+DetenerSentencia ::= "detener" ";"
+ContinuarSentencia ::= "continuar" ";"
+RetornarSentencia ::= "retornar" ";" | "retornar" Expresion ";"
+ImprimirStmt ::= "imprimir" Expresion | "imprimir" "nl" Expresion
+
+TIPO DE DATOS
+
+TipoBase ::= "entero" | "decimal" | "booleano" | "caracter" | "cadena"
+TipoSimple ::= TipoBase | ID
+TipoArray ::= TipoBase "[" "]" | TipoBase "[" "]" "[" "]"
+
+TOKEN TERMINALES
+
+ID ::= [A-Za-z_][A-Za-z0-9_]*
+NUMBER ::= [0-9]+
+DECIMAL ::= [0-9]+"."[0-9]+
+STRING ::= \"(\\.|[^"\\])*\"
+CHAR ::= \'(\\.|[^'\\])\'
+EOF ::= End of File
+
+OPERADORES Y SIMBOLOS
+
+Operadores de Comparación: "==", "!=", "<", ">", "<=", ">="
+Operadores Lógicos: "&&", "||", "!"
+Operadores Aritméticos: "+", "-", "*", "/", "%", "^"
+Operadores de Incremento: "++", "--"
+Símbolos: "(", ")", "{", "}", "[", "]", ";", ",", ".", ":", "?", "=", "->"

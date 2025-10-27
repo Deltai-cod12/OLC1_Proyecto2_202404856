@@ -10,11 +10,11 @@ class Acceso extends Expresion {
     }
     
     evaluar(entorno) {
-        // Implementación básica - necesitarás expandir según tu lógica de objetos/arrays
+        // Implementacion basica - necesitaras expandir segun tu logica de objetos/arrays
         if (this.propiedad) {
             const obj = this.objeto.evaluar(entorno);
-            // Lógica para acceso a miembros de objetos
-            throw new Error(`Acceso a objetos no implementado (línea ${this.linea})`);
+            // Logica para acceso a miembros de objetos
+            throw new Error(`Acceso a objetos no implementado (linea ${this.linea})`);
         } else {
             // Es un identificador simple
             return this.objeto.evaluar(entorno);

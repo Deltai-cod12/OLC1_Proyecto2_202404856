@@ -10,7 +10,7 @@ class Funcion extends Instruccion {
     }
     
     evaluar(entorno) {
-        // Registrar la función en el entorno
+        // Registrar la funcion en el entorno
         entorno.agregar(this.nombre, {
             nombre: this.nombre,
             tipo: 'funcion',
@@ -20,10 +20,10 @@ class Funcion extends Instruccion {
     }
     
     llamar(entorno, argumentos) {
-        // Crear nuevo entorno para la función
+        // Crear nuevo entorno para la funcion
         const entornoFuncion = new (require('../entorno').Entorno)(entorno);
         
-        // Asignar parámetros
+        // Asignar parametros
         for (let i = 0; i < this.parametros.length; i++) {
             const param = this.parametros[i];
             const arg = argumentos[i] || { valor: param.defaultValue, tipo: param.tipo };

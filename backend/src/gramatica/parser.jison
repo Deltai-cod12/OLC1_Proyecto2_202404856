@@ -13,7 +13,7 @@ function listify(x){
     return [x];
 }
 
-// ========== FUNCIÓN PARA PROCESAR SECUENCIAS DE ESCAPE ==========
+// ========== FUNCION PARA PROCESAR SECUENCIAS DE ESCAPE ==========
 function processEscapes(str) {
     return str.replace(/\\([nrt'"\\])/g, function(match, esc) {
         switch(esc) {
@@ -28,7 +28,7 @@ function processEscapes(str) {
     });
 }
 
-// ========== TABLA DE SÍMBOLOS Y VERIFICACIÓN DE TIPOS ==========
+// ========== TABLA DE SIMBOLOS Y VERIFICACION DE TIPOS ==========
 
 const symbolTable = {};
 
@@ -49,16 +49,16 @@ function getType(node) {
     // Para literales
     if (node.kind) return node.kind;
     
-    // Para identificadores - BUSCAR EN TABLA DE SÍMBOLOS
+    // Para identificadores - BUSCAR EN TABLA DE SIMBOLOS
     if (node.type === 'Identifier') {
         return getSymbolType(node.name);
     }
     
-    // FIX CRÍTICO: Para operaciones binarias de comparación
+    // FIX CRITICO: Para operaciones binarias de comparacion
     if (node.type === 'BinaryOp') {
         const comparisonOps = ['>', '<', '>=', '<=', '==', '!=', '&&', '||'];
         if (comparisonOps.includes(node.operator)) {
-            return 'booleano'; // ← ESTA LÍNEA FALTA EN TU CÓDIGO
+            return 'booleano'; // ← ESTA LINEA FALTA EN TU CODIGO
         }
         return node.resultType || 'desconocido';
     }
@@ -112,7 +112,7 @@ function checkNotTypes(expr) {
     return 'booleano';
 }
 
-// ========== FUNCIONES PARA OPERADORES LÓGICOS ==========
+// ========== FUNCIONES PARA OPERADORES LOGICOS ==========
 
 function isValidLogicalType(leftType, rightType, operator) {
     // Si alguno es desconocido, no podemos verificar
@@ -135,7 +135,7 @@ function checkLogicalTypes(left, right, operator) {
         }
     }
     
-    // Operadores lógicos SIEMPRE retornan booleano
+    // Operadores logicos SIEMPRE retornan booleano
     return 'booleano';
 }
 
@@ -147,7 +147,7 @@ function isValidTernaryConditionType(condType) {
         return true;
     }
     
-    // La condición debe ser booleana
+    // La condicion debe ser booleana
     return condType === 'booleano';
 }
 
@@ -169,12 +169,12 @@ function getTernaryResultType(trueType, falseType) {
         return 'decimal';
     }
     
-    // Cadena con cualquier cosa → Cadena (concatenación implícita)
+    // Cadena con cualquier cosa → Cadena (concatenacion implicita)
     if (trueType === 'cadena' || falseType === 'cadena') {
         return 'cadena';
     }
     
-    // Si no son compatibles, retornamos desconocido (se generará error)
+    // Si no son compatibles, retornamos desconocido (se generara error)
     return 'desconocido';
 }
 
@@ -189,10 +189,10 @@ function checkTernaryTypes(cond, trueExpr, falseExpr) {
     console.log("  cond.operator:", cond.operator);
     console.log("  cond.type:", cond.type);
     
-    // Verificar condición
+    // Verificar condicion
     if (condType !== 'desconocido') {
         if (!isValidTernaryConditionType(condType)) {
-            throw new Error(`Error de tipo: La condición del operador ternario debe ser booleana, no ${condType}`);
+            throw new Error(`Error de tipo: La condicion del operador ternario debe ser booleana, no ${condType}`);
         }
     }
     
@@ -206,7 +206,7 @@ function checkTernaryTypes(cond, trueExpr, falseExpr) {
     return resultType;
 }
 
-// ========== FUNCIONES PARA NEGACIÓN UNARIA ==========
+// ========== FUNCIONES PARA NEGACION UNARIA ==========
 
 function isValidUnaryNegationType(exprType) {
     // Si es desconocido, no podemos verificar
@@ -234,7 +234,7 @@ function checkUnaryNegationTypes(expr) {
     // Solo verificamos si el tipo es conocido
     if (exprType !== 'desconocido') {
         if (!isValidUnaryNegationType(exprType)) {
-            throw new Error(`Error de tipo: No se puede aplicar negación unaria a ${exprType}`);
+            throw new Error(`Error de tipo: No se puede aplicar negacion unaria a ${exprType}`);
         }
     }
     
@@ -249,12 +249,12 @@ function isValidRelationalType(leftType, rightType, operator) {
         return true; // Permitimos por ahora para no bloquear el parsing
     }
     
-    // Por ahora, permitimos comparaciones entre tipos numéricos y del mismo tipo
-    // Esto será refinado cuando tengamos la tabla completa
+    // Por ahora, permitimos comparaciones entre tipos numericos y del mismo tipo
+    // Esto sera refinado cuando tengamos la tabla completa
     const numericTypes = ['entero', 'decimal'];
     const sameTypeComparisons = ['booleano', 'caracter', 'cadena'];
     
-    // Comparaciones numéricas
+    // Comparaciones numericas
     if (numericTypes.includes(leftType) && numericTypes.includes(rightType)) {
         return true;
     }
@@ -264,7 +264,7 @@ function isValidRelationalType(leftType, rightType, operator) {
         return true;
     }
     
-    // Carácter con entero/decimal (usando código ASCII)
+    // Caracter con entero/decimal (usando codigo ASCII)
     if (leftType === 'caracter' && numericTypes.includes(rightType)) {
         return true;
     }
@@ -291,7 +291,7 @@ function checkRelationalTypes(left, right, operator) {
     return 'booleano';
 }
 
-// ========== FUNCIONES PARA MÓDULO (%) ==========
+// ========== FUNCIONES PARA MODULO (%) ==========
 
 function isValidModuloType(leftType, rightType) {
     // Si alguno es desconocido, no podemos verificar
@@ -310,7 +310,7 @@ function getModuloResultType(leftType, rightType) {
         return 'desconocido';
     }
     
-    // El módulo SIEMPRE retorna decimal
+    // El modulo SIEMPRE retorna decimal
     return 'decimal';
 }
 
@@ -321,7 +321,7 @@ function checkModuloTypes(left, right) {
     // Solo verificamos si ambos tipos son conocidos
     if (leftType !== 'desconocido' && rightType !== 'desconocido') {
         if (!isValidModuloType(leftType, rightType)) {
-            throw new Error(`Error de tipo: No se puede aplicar módulo entre ${leftType} y ${rightType}`);
+            throw new Error(`Error de tipo: No se puede aplicar modulo entre ${leftType} y ${rightType}`);
         }
     }
     
@@ -374,7 +374,7 @@ function checkPowerTypes(left, right) {
     return getPowerResultType(leftType, rightType);
 }
 
-// ========== FUNCIONES PARA DIVISIÓN ==========
+// ========== FUNCIONES PARA DIVISION ==========
 
 function isValidDivisionType(leftType, rightType) {
     // Si alguno es desconocido, no podemos verificar
@@ -388,7 +388,7 @@ function isValidDivisionType(leftType, rightType) {
         'caracter': ['entero', 'decimal']
     };
     
-    // Boolean y cadena no están en la tabla de división, por lo que son inválidos
+    // Boolean y cadena no estan en la tabla de division, por lo que son invalidos
     if (leftType === 'booleano' || rightType === 'booleano' || 
         leftType === 'cadena' || rightType === 'cadena') {
         return false;
@@ -403,7 +403,7 @@ function getDivisionResultType(leftType, rightType) {
         return 'desconocido';
     }
     
-    // La división SIEMPRE retorna decimal, incluso entre enteros
+    // La division SIEMPRE retorna decimal, incluso entre enteros
     return 'decimal';
 }
 
@@ -421,7 +421,7 @@ function checkDivisionTypes(left, right) {
     return getDivisionResultType(leftType, rightType);
 }
 
-// ========== FUNCIONES PARA MULTIPLICACIÓN ==========
+// ========== FUNCIONES PARA MULTIPLICACION ==========
 
 function isValidMultiplicationType(leftType, rightType) {
     // Si alguno es desconocido, no podemos verificar
@@ -435,7 +435,7 @@ function isValidMultiplicationType(leftType, rightType) {
         'caracter': ['entero', 'decimal']
     };
     
-    // Boolean y cadena no están en la tabla de multiplicación, por lo que son inválidos
+    // Boolean y cadena no estan en la tabla de multiplicacion, por lo que son invalidos
     if (leftType === 'booleano' || rightType === 'booleano' || 
         leftType === 'cadena' || rightType === 'cadena') {
         return false;
@@ -495,7 +495,7 @@ function isValidSubtractionType(leftType, rightType) {
         'caracter': ['entero', 'decimal']
     };
     
-    // Cadena no está en la tabla de resta, por lo que es inválida
+    // Cadena no esta en la tabla de resta, por lo que es invalida
     if (leftType === 'cadena' || rightType === 'cadena') {
         return false;
     }
@@ -569,7 +569,7 @@ function getSumResultType(leftType, rightType) {
         return 'desconocido';
     }
     
-    // Si alguno es cadena, el resultado es cadena (concatenación)
+    // Si alguno es cadena, el resultado es cadena (concatenacion)
     if (leftType === 'cadena' || rightType === 'cadena') {
         return 'cadena';
     }
@@ -590,7 +590,7 @@ function getSumResultType(leftType, rightType) {
         return 'entero';
     }
     
-    // Combinaciones con booleanos y caracteres entre sí
+    // Combinaciones con booleanos y caracteres entre si
     if ((leftType === 'booleano' && rightType === 'caracter') ||
         (leftType === 'caracter' && rightType === 'booleano')) {
         return 'entero';
@@ -646,7 +646,7 @@ function checkSumTypes(left, right) {
 "//"[^\n]*                        { /* skip single-line comments */ }
 \/\*[^]*?\*\/                     { /* skip multi-line comments */ }
 
-/* Keywords - ORDEN CORRECTO: específicos primero */
+/* Keywords - ORDEN CORRECTO: especificos primero */
 "vector"                          return 'TK_VECTOR';
 "entero"                          return 'TK_ENTERO';
 "decimal"                         return 'TK_DECIMAL';
@@ -680,13 +680,13 @@ function checkSumTypes(left, right) {
 "Verdadero"|"verdadero"|"true"    return 'TK_TRUE';
 "Falso"|"falso"|"false"           return 'TK_FALSE';
 
-/* Casteos - PATRONES MÁS SIMPLES */
+/* Casteos - PATRONES MAS SIMPLES */
 "("[\s]*"entero"[\s]*")"          return 'CAST_ENTERO';
 "("[\s]*"decimal"[\s]*")"         return 'CAST_DECIMAL';
 "("[\s]*"caracter"[\s]*")"        return 'CAST_CARACTER';
 "("[\s]*"cadena"[\s]*")"          return 'CAST_CADENA';
 
-/* String y Char - VERSIÓN CORREGIDA QUE COMPILA */
+/* String y Char - VERSION CORREGIDA QUE COMPILA */
 \"(\\.|[^"\\])*\"                 { 
     let stringContent = yytext.slice(1, -1);
     stringContent = stringContent.replace(/\\n/g, '\n')
@@ -715,7 +715,7 @@ function checkSumTypes(left, right) {
 [0-9]+"."[0-9]+                   return 'DECIMAL';
 [0-9]+                            return 'NUMBER';
 
-/* Operadores y símbolos - MÁS ESPECÍFICOS */
+/* Operadores y simbolos - MAS ESPECIFICOS */
 "=="                              return 'EQ';
 "!="                              return 'NEQ';
 "<="                              return 'LE';
@@ -726,7 +726,7 @@ function checkSumTypes(left, right) {
 "--"                              return 'DECR';
 "->"                              return '->';
 
-/* Puntuación - INDIVIDUAL Y EN ORDEN CORRECTO */
+/* Puntuacion - INDIVIDUAL Y EN ORDEN CORRECTO */
 "["                               return '[';
 "]"                               return ']';
 "("                               return '(';
@@ -754,14 +754,14 @@ function checkSumTypes(left, right) {
 
 <<EOF>>                           return 'EOF';
 
-/* Cualquier otro carácter no reconocido */
+/* Cualquier otro caracter no reconocido */
 .                                 {
-    throw new Error(`Carácter no reconocido: '${yytext}' en línea ${yylineno + 1}`);
+    throw new Error(`Caracter no reconocido: '${yytext}' en linea ${yylineno + 1}`);
 }
 /lex
 
 %%
-/* ================== GRAMÁTICA COMPLETA ================== */
+/* ================== GRAMATICA COMPLETA ================== */
 
 programa
     : lista_declaraciones_globales EOF
@@ -805,9 +805,9 @@ lista_sentencias
     | lista_sentencias sentencia { $$ = $1.concat(listify($2)); }
     ;
 
-/* ----------------- INSTANCIACIÓN DE OBJETOS -------------------- */
+/* ----------------- INSTANCIACION DE OBJETOS -------------------- */
 
-/* Instanciación de objetos */
+/* Instanciacion de objetos */
 instanciacion_objeto
     : TK_INGRESAR_OBJETO ID ID '->' ID '(' lista_expresiones ')'
         {
@@ -829,7 +829,7 @@ instanciacion_objeto
         }
     ;
 
-/* métodos de objetos */
+/* metodos de objetos */
 ejecutar_metodo
     : TK_EJECUTAR acceso '.' ID '(' argumentos ')'
         { 
@@ -878,13 +878,13 @@ atributo
         }
     ;
 
-/* Lista de métodos del objeto */
+/* Lista de metodos del objeto */
 lista_metodos_objeto
     : /* empty */                 { $$ = []; }
     | lista_metodos_objeto metodo_objeto { $$ = $1.concat([$2]); }
     ;
 
-/* Método individual del objeto (CON TK_CON_METODO) */
+/* Metodo individual del objeto (CON TK_CON_METODO) */
 metodo_objeto
     : ID TK_CON_METODO ID '(' ')' bloque
         {
@@ -965,13 +965,13 @@ declaracion_procedimiento
         }
     ;
 
-/* Lista de parámetros */
+/* Lista de parametros */
 lista_parametros
     : parametro_declara                  { $$ = [$1]; }
     | lista_parametros ',' parametro_declara { $$ = $1.concat([$3]); }
     ;
 
-/* Declaración de parámetro (con o sin valor por defecto) */
+/* Declaracion de parametro (con o sin valor por defecto) */
 parametro_declara
     : tipo_simple ID
         {
@@ -1035,14 +1035,14 @@ para_sentencia
         }
     ;
 
-/* Inicialización del PARA (declaración o asignación) */
+/* Inicializacion del PARA (declaracion o asignacion) */
 para_inicializacion
     : declaracion_para_var      { $$ = $1; }    /* entero i con valor 0 */
     | asignacion_para          { $$ = $1; }    /* j = 0 */
-    | /* vacío */              { $$ = null; }
+    | /* vacio */              { $$ = null; }
     ;
 
-/* Declaración específica para PARA */
+/* Declaracion especifica para PARA */
 declaracion_para_var
     : tipo_simple ID TK_CON_VALOR expresion
         { 
@@ -1066,7 +1066,7 @@ asignacion_para
     ;
 
 
-/* Actualización del PARA (asignación o incremento) */
+/* Actualizacion del PARA (asignacion o incremento) */
 para_actualizacion
     : ID '=' expresion
         { 
@@ -1076,7 +1076,7 @@ para_actualizacion
           }); 
         }
     | incremento                { $$ = $1; }
-    | /* vacío */              { $$ = null; }
+    | /* vacio */              { $$ = null; }
     ;
 
 /* Sentencia MIENTRAS */
@@ -1110,12 +1110,12 @@ si_sentencia
     ;
 
 optional_o_si
-    : /* vacío */                        { $$ = []; }
+    : /* vacio */                        { $$ = []; }
     | lista_o_si                         { $$ = $1; }
     ;
 
 optional_de_lo_contrario  
-    : /* vacío */                        { $$ = null; }
+    : /* vacio */                        { $$ = null; }
     | TK_DE_LO_CONTRARIO bloque          { $$ = $2; }  // CAMBIADO: solo 1 token
     ;
 
@@ -1176,19 +1176,19 @@ lista_filas
 declaracion_variable
     : tipo_simple lista_ids
         { 
-          // AGREGAR A TABLA DE SÍMBOLOS
+          // AGREGAR A TABLA DE SIMBOLOS
           $2.forEach(id => addToSymbolTable(id, $1));
           $$ = makeNode('VarDecl', { tipo: $1, ids: $2 }); 
         }
     | tipo_simple lista_ids '=' lista_expresiones
         { 
-          // AGREGAR A TABLA DE SÍMBOLOS
+          // AGREGAR A TABLA DE SIMBOLOS
           $2.forEach(id => addToSymbolTable(id, $1));
           $$ = makeNode('VarDecl', { tipo: $1, ids: $2, valores: $4 }); 
         }
     | tipo_simple lista_ids TK_CON_VALOR lista_expresiones  /* CAMBIADO: TK_CON_VALOR en lugar de TK_CON TK_VALOR */
         { 
-          // AGREGAR A TABLA DE SÍMBOLOS
+          // AGREGAR A TABLA DE SIMBOLOS
           $2.forEach(id => addToSymbolTable(id, $1));
           $$ = makeNode('VarDecl', { tipo: $1, ids: $2, valores: $4 });  /* $4 en lugar de $5 */
         }
@@ -1232,15 +1232,15 @@ declaracion_vector
               dimensiones: 1
           }); 
         }
-    /* Vectores 2D con literales - VERSIÓN MEJORADA */
+    /* Vectores 2D con literales - VERSION MEJORADA */
 | tipo_base '[' ']' '[' ']' ID '=' '[' lista_filas ']'
     { 
       addToSymbolTable($6, $1 + '[][]');
       
-      // VERIFICACIÓN: Si $8 es el token '[' en lugar de lista_filas
+      // VERIFICACION: Si $8 es el token '[' en lugar de lista_filas
       let valores = $8;
       if ($8 === '[' || !Array.isArray($8)) {
-          console.log("ADVERTENCIA: lista_filas no se procesó correctamente, usando array vacío");
+          console.log("ADVERTENCIA: lista_filas no se proceso correctamente, usando array vacio");
           valores = [];  // Fallback seguro
       }
       
@@ -1253,7 +1253,7 @@ declaracion_vector
     }
     ;
 
-/* Declaración unificada */
+/* Declaracion unificada */
 declaracion
     : declaracion_variable
         { $$ = $1; }
@@ -1285,7 +1285,7 @@ incremento
     | acceso DECR      { $$ = makeNode('Increment', { variable: $1, operator: '--' }); }
     ;
 
-/* ---------------- Asignación ---------------- */
+/* ---------------- Asignacion ---------------- */
 asignacion
     : acceso '=' expresion       { $$ = makeNode('Assign', { target: $1, value: $3 }); }
     ;

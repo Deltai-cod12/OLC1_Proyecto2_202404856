@@ -13,7 +13,7 @@ class If extends Instruccion {
         const condicion = this.condicion.evaluar(entorno);
         
         if (condicion.tipo !== 'booleano') {
-            throw new Error(`La condición del IF debe ser booleana, no ${condicion.tipo} (línea ${this.linea})`);
+            throw new Error(`La condicion del IF debe ser booleana, no ${condicion.tipo} (linea ${this.linea})`);
         }
         
         if (condicion.valor) {
@@ -24,7 +24,7 @@ class If extends Instruccion {
         for (const elseIf of this.elseIfs) {
             const elseIfCond = elseIf.condition.evaluar(entorno);
             if (elseIfCond.tipo !== 'booleano') {
-                throw new Error(`La condición del O SI debe ser booleana, no ${elseIfCond.tipo} (línea ${elseIf.linea})`);
+                throw new Error(`La condicion del O SI debe ser booleana, no ${elseIfCond.tipo} (linea ${elseIf.linea})`);
             }
             if (elseIfCond.valor) {
                 return elseIf.thenBlock.evaluar(entorno);

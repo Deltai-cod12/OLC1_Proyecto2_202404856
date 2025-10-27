@@ -3,7 +3,6 @@
 const { Entorno, Simbolo } = require('./entorno');
 const Interprete = require('./interprete');
 
-// NUEVO: Clases para control de flujo
 class BreakException extends Error {
     constructor() {
         super('Break');
@@ -26,6 +25,43 @@ class ReturnException extends Error {
     }
 }
 
+class ObjectSymbol extends Simbolo {
+    constructor(nombre, atributos = [], metodos = []) {
+        super(nombre, 'objeto', { atributos, metodos });
+        this.atributos = atributos;
+        this.metodos = metodos;
+    }
+
+    obtenerAtributo(nombre) {
+        return this.atributos.find(attr => attr.name === nombre);
+    }
+
+    obtenerMetodo(nombre) {
+        return this.metodos.find(method => method.name === nombre);
+    }
+
+    agregarMetodo(metodo) {
+        this.metodos.push(metodo);
+    }
+}
+
+class InstanceSymbol extends Simbolo {
+    constructor(nombre, tipoObjeto, valores = {}) {
+        super(nombre, 'instancia', valores);
+        this.tipoObjeto = tipoObjeto;
+        this.valores = valores;
+    }
+
+    establecerValor(atributo, valor) {
+        this.valores[atributo] = valor;
+    }
+
+    obtenerValor(atributo) {
+        return this.valores[atributo];
+    }
+}
+
+
 class AnalizadorSemantico {
     constructor() {
         this.interprete = new Interprete();
@@ -35,23 +71,23 @@ class AnalizadorSemantico {
     analizar(ast) {
         try {
             this.salida = [];
-            console.log("Iniciando análisis semántico...");
+            console.log("Iniciando analisis semantico...");
             
-            // Agregar el método evaluar al AST
+            // evaluar el ast
             this.prepararAST(ast);
             
-            // Ejecutar el programa - SOLO el analizador captura la salida
+            // Ejecutar el programa
             this.interprete.interpretar(ast, (texto) => {
                 this.capturarSalida(texto);
             });
             
             return { 
                 exito: true, 
-                mensaje: "Análisis semántico completado",
+                mensaje: "Analisis semantico completado",
                 salida: this.salida.join('\n')
             };
         } catch (error) {
-            // NUEVO: Manejar ReturnException como terminación normal en contexto global
+            // Manejaa ReturnException como terminacion normal en contexto global
             if (error instanceof ReturnException) {
                 console.log("Programa terminado por 'retornar'");
                 return { 
@@ -71,10 +107,10 @@ class AnalizadorSemantico {
     
     prepararAST(ast) {
         if (!ast || !ast.body) {
-            throw new Error("AST inválido o vacío");
+            throw new Error("AST invalido o vacio");
         }
         
-        // Agregar método evaluar al programa principal
+        // Agregar metodo evaluar al programa principal
         ast.evaluar = (entorno) => {
             for (const instruccion of ast.body) {
                 this.evaluarNodo(instruccion, entorno);
@@ -214,7 +250,6 @@ class AnalizadorSemantico {
                     nodo.evaluar = (entorno) => this.evaluarContinue(nodo, entorno);
                     break;
 
-                // NUEVO: Casos para procedimientos y funciones
                 case 'ProcedureDecl':
                     nodo.evaluar = (entorno) => this.evaluarProcedureDecl(nodo, entorno);
                     if (nodo.parameters && Array.isArray(nodo.parameters)) {
@@ -262,6 +297,43 @@ class AnalizadorSemantico {
                     nodo.evaluar = (entorno) => this.evaluarReturnStmt(nodo, entorno);
                     if (nodo.value) this.prepararNodos([nodo.value]);
                     break;
+
+                case 'ObjectDecl':
+                    nodo.evaluar = (entorno) => this.evaluarObjectDecl(nodo, entorno);
+                    if (nodo.attributes && Array.isArray(nodo.attributes)) {
+                        this.prepararNodos(nodo.attributes);
+                    }
+                    if (nodo.methods && Array.isArray(nodo.methods)) {
+                        this.prepararNodos(nodo.methods);
+                    }
+                    break;
+                
+                case 'ObjectMethod':
+                    nodo.evaluar = (entorno) => this.evaluarObjectMethod(nodo, entorno);
+                    if (nodo.parameters && Array.isArray(nodo.parameters)) {
+                        this.prepararNodos(nodo.parameters);
+                    }
+                    if (nodo.body) this.prepararNodos([nodo.body]);
+                    break;
+                
+                case 'ObjectInstance':
+                    nodo.evaluar = (entorno) => this.evaluarObjectInstance(nodo, entorno);
+                    if (nodo.arguments && Array.isArray(nodo.arguments)) {
+                        this.prepararNodos(nodo.arguments);
+                    }
+                    break;
+                
+                case 'MethodExecute':
+                    nodo.evaluar = (entorno) => this.evaluarMethodExecute(nodo, entorno);
+                    if (nodo.instance) this.prepararNodos([nodo.instance]);
+                    if (nodo.args && Array.isArray(nodo.args)) {
+                        this.prepararNodos(nodo.args);
+                    }
+                    break;
+                
+                case 'AttributeDecl':
+                    nodo.evaluar = (entorno) => this.evaluarAttributeDecl(nodo, entorno);
+                    break;
                     
                 default:
                     console.log(`Tipo de nodo no manejado: ${nodo.type}`);
@@ -270,14 +342,16 @@ class AnalizadorSemantico {
         }
     }
     
+    //Evaluamos el nodo
     evaluarNodo(nodo, entorno) {
         if (nodo && typeof nodo.evaluar === 'function') {
             return nodo.evaluar(entorno);
         }
-        console.log(`Nodo sin método evaluar:`, nodo);
+        console.log(`Nodo sin metodo evaluar:`, nodo);
         return { valor: null, tipo: 'desconocido' };
     }
-    
+
+    // Evaluamos el imprimir
     evaluarPrint(nodo, entorno) {
         const resultado = this.evaluarNodo(nodo.expr, entorno);
         const textoSalida = String(resultado.valor);
@@ -288,11 +362,12 @@ class AnalizadorSemantico {
         return resultado;
     }
     
+    //Evaluamos las operaciones binarias
     evaluarBinaryOp(nodo, entorno) {
         const izquierda = this.evaluarNodo(nodo.left, entorno);
         const derecha = this.evaluarNodo(nodo.right, entorno);
         
-        console.log(`Operación: ${izquierda.valor} ${nodo.operator} ${derecha.valor}`);
+        console.log(`Operacion: ${izquierda.valor} ${nodo.operator} ${derecha.valor}`);
         
         let resultado;
         switch (nodo.operator) {
@@ -307,7 +382,7 @@ class AnalizadorSemantico {
                 break;
             case '/':
                 if (derecha.valor === 0) {
-                    throw new Error("División por cero");
+                    throw new Error("Division por cero");
                 }
                 resultado = izquierda.valor / derecha.valor;
                 break;
@@ -336,11 +411,11 @@ class AnalizadorSemantico {
                 resultado = izquierda.valor != derecha.valor;
                 break;
             case '&&':
-                // AND lógico: solo devuelve true si ambos operandos son true
+                // AND
                 resultado = Boolean(izquierda.valor) && Boolean(derecha.valor);
                 break;
             case '||':
-                // OR lógico: devuelve true si al menos un operando es true
+                // OR
                 resultado = Boolean(izquierda.valor) || Boolean(derecha.valor);
                 break;
             default:
@@ -360,7 +435,8 @@ class AnalizadorSemantico {
             tipo: nodo.kind || this.inferirTipo(nodo.value)
         };
     }
-    
+
+    //Evaluamos los identiificadores
     evaluarIdentifier(nodo, entorno) {
         const simbolo = entorno.obtener(nodo.name);
         if (!simbolo) {
@@ -391,6 +467,7 @@ class AnalizadorSemantico {
         return { valor: null, tipo: 'void' };
     }
     
+    //Evaluamos las asignaciones
     evaluarAssign(nodo, entorno) {
         const valor = this.evaluarNodo(nodo.value, entorno);
         
@@ -401,17 +478,17 @@ class AnalizadorSemantico {
             return valor;
         }
         
-        // Asignación normal a variable
+        // Asignacion normal a variable
         const nombreVariable = nodo.target.name || nodo.target;
         if (!entorno.actualizar(nombreVariable, valor.valor)) {
-            throw new Error(`Variable '${nombreVariable}' no definida para asignación`);
+            throw new Error(`Variable '${nombreVariable}' no definida para asignacion`);
         }
         
         console.log(`Variable asignada: ${nombreVariable} = ${valor.valor}`);
         return valor;
     }
 
-    
+    //Evaluamos las operaciones unarias
     evaluarUnaryOp(nodo, entorno) {
         const expr = this.evaluarNodo(nodo.expr, entorno);
         
@@ -428,11 +505,12 @@ class AnalizadorSemantico {
         }
     }
     
+    //Evaluamos las funciones de texto
     evaluarFuncionTexto(nodo, entorno) {
         const expr = this.evaluarNodo(nodo.expr, entorno);
         
         if (expr.tipo !== 'cadena') {
-            throw new Error(`Función ${nodo.type} requiere cadena, se recibió ${expr.tipo}`);
+            throw new Error(`Funcion ${nodo.type} requiere cadena, se recibio ${expr.tipo}`);
         }
         
         let resultado;
@@ -445,19 +523,20 @@ class AnalizadorSemantico {
         return { valor: resultado, tipo: 'cadena' };
     }
     
+    //Evaliamos los si, de lo contrario
     evaluarIf(nodo, entorno) {
         console.log(`Evaluando IF...`);
         
-        // Evaluar condición
+        // Evaluar condicion
         const condicion = this.evaluarNodo(nodo.condition, entorno);
         
         if (condicion.tipo !== 'booleano') {
-            throw new Error(`La condición del IF debe ser booleana, no ${condicion.tipo}`);
+            throw new Error(`La condicion del IF debe ser booleana, no ${condicion.tipo}`);
         }
 
-        // Ejecutar bloque THEN si condición es verdadera
+        // Ejecutar bloque THEN si condicion es verdadera
         if (condicion.valor) {
-            console.log(`Condición verdadera, ejecutando THEN`);
+            console.log(`Condicion verdadera, ejecutando THEN`);
             return this.evaluarNodo(nodo.thenBlock, entorno);
         }
 
@@ -467,11 +546,11 @@ class AnalizadorSemantico {
                 const condElseIf = this.evaluarNodo(elseIf.condition, entorno);
 
                 if (condElseIf.tipo !== 'booleano') {
-                    throw new Error(`La condición del O SI debe ser booleana, no ${condElseIf.tipo}`);
+                    throw new Error(`La condicion del O SI debe ser booleana, no ${condElseIf.tipo}`);
                 }
 
                 if (condElseIf.valor) {
-                    console.log(`Condición O SI verdadera, ejecutando bloque`);
+                    console.log(`Condicion O SI verdadera, ejecutando bloque`);
                     return this.evaluarNodo(elseIf.thenBlock, entorno);
                 }
             }
@@ -479,15 +558,15 @@ class AnalizadorSemantico {
 
         // Ejecutar ELSE si existe
         if (nodo.elseBlock) {
-            console.log(`Condición falsa, ejecutando ELSE`);
+            console.log(`Condicion falsa, ejecutando ELSE`);
             return this.evaluarNodo(nodo.elseBlock, entorno);
         }
 
-        console.log(`Condición falsa, sin ELSE`);
+        console.log(`Condicion falsa, sin ELSE`);
         return { valor: null, tipo: 'void' };
     }
 
-    // NUEVO: Evaluar casteos
+    //Evaluamos casteos
     evaluarCast(nodo, entorno) {
         const expr = this.evaluarNodo(nodo.expr, entorno);
         
@@ -534,7 +613,7 @@ class AnalizadorSemantico {
                 
             case 'caracter':
                 if (expr.tipo === 'entero') {
-                    // Convertir código ASCII a caracter
+                    // Convertir codigo ASCII a caracter
                     if (expr.valor < 0 || expr.valor > 65535) {
                         throw new Error(`Valor ${expr.valor} fuera de rango para caracter`);
                     }
@@ -554,7 +633,7 @@ class AnalizadorSemantico {
         return { valor: valorConvertido, tipo: tipoResultado };
     }
 
-    // NUEVO: Evaluar incremento/decremento
+    //Evaluamos incremento ydecremento
     evaluarIncrement(nodo, entorno) {
         // Obtener la variable actual
         const nombreVariable = nodo.variable.name;
@@ -565,7 +644,7 @@ class AnalizadorSemantico {
         }
         
         if (simbolo.tipo !== 'entero' && simbolo.tipo !== 'decimal') {
-            throw new Error(`Operador ${nodo.operator} solo aplica a tipos numéricos, no ${simbolo.tipo}`);
+            throw new Error(`Operador ${nodo.operator} solo aplica a tipos numericos, no ${simbolo.tipo}`);
         }
         
         const valorActual = simbolo.valor;
@@ -588,6 +667,7 @@ class AnalizadorSemantico {
         return { valor: valorActual, tipo: simbolo.tipo };
     }
 
+    //Evaluamos bloques
     evaluarBlock(nodo, entorno) {
         console.log(`Ejecutando bloque con ${nodo.statements?.length || 0} sentencias`);
         
@@ -598,7 +678,7 @@ class AnalizadorSemantico {
                 try {
                     ultimoResultado = this.evaluarNodo(sentencia, entorno);
                 } catch (error) {
-                    // NUEVO: Propagar ReturnException, BreakException y ContinueException
+                    //Propagar ReturnException, BreakException y ContinueException
                     if (error instanceof ReturnException || 
                         error instanceof BreakException || 
                         error instanceof ContinueException) {
@@ -612,7 +692,7 @@ class AnalizadorSemantico {
         return ultimoResultado;
     }
 
-    // NUEVO: Evaluar MIENTRAS
+    //Evaluamos mienstras
     evaluarWhile(nodo, entorno) {
         console.log(`Iniciando bucle MIENTRAS...`);
         
@@ -621,22 +701,22 @@ class AnalizadorSemantico {
         
         while (iteraciones < MAX_ITERACIONES) {
             try {
-                // Evaluar condición
+                // Evaluar condicion
                 const condicion = this.evaluarNodo(nodo.condition, entorno);
                 
-                console.log(`Condición MIENTRAS: ${condicion.valor} (${condicion.tipo})`);
+                console.log(`Condicion MIENTRAS: ${condicion.valor} (${condicion.tipo})`);
                 
                 if (condicion.tipo !== 'booleano') {
-                    throw new Error(`La condición del MIENTRAS debe ser booleana, no ${condicion.tipo}`);
+                    throw new Error(`La condicion del MIENTRAS debe ser booleana, no ${condicion.tipo}`);
                 }
                 
-                // Salir si condición es falsa
+                // Salir si condicion es falsa
                 if (!condicion.valor) {
-                    console.log(`Condición falsa, terminando MIENTRAS después de ${iteraciones} iteraciones`);
+                    console.log(`Condicion falsa, terminando MIENTRAS despues de ${iteraciones} iteraciones`);
                     break;
                 }
                 
-                console.log(`Ejecutando iteración ${iteraciones + 1} del MIENTRAS`);
+                console.log(`Ejecutando iteracion ${iteraciones + 1} del MIENTRAS`);
                 
                 // Ejecutar cuerpo del bucle
                 this.evaluarNodo(nodo.body, entorno);
@@ -646,12 +726,12 @@ class AnalizadorSemantico {
                     console.log(`DETENER encontrado, saliendo del MIENTRAS`);
                     break;
                 } else if (error instanceof ContinueException) {
-                    console.log(`CONTINUAR encontrado, siguiente iteración del MIENTRAS`);
-                    // Continuar con la siguiente iteración
+                    console.log(`CONTINUAR encontrado, siguiente iteracion del MIENTRAS`);
+                    // Continuar con la siguiente iteracion
                     iteraciones++;
                     continue;
                 } else if (error instanceof ReturnException) {
-                    // NUEVO: Propagar ReturnException para salir de la función
+                    //Propagar ReturnException para salir de la funcion
                     console.log(`RETORNAR encontrado en MIENTRAS, propagando...`);
                     throw error;
                 } else {
@@ -662,9 +742,9 @@ class AnalizadorSemantico {
             
             iteraciones++;
             
-            // Prevención de bucles infinitos
+            // Prevencion de bucles infinitos
             if (iteraciones >= MAX_ITERACIONES) {
-                throw new Error(`Bucle MIENTRAS excedió el límite de ${MAX_ITERACIONES} iteraciones (posible bucle infinito)`);
+                throw new Error(`Bucle MIENTRAS excedio el limite de ${MAX_ITERACIONES} iteraciones (posible bucle infinito)`);
             }
         }
         
@@ -672,7 +752,7 @@ class AnalizadorSemantico {
         return { valor: null, tipo: 'void' };
     }
 
-    // NUEVO: Evaluar HACER-HASTA-QUE
+    // Evaluamos hacer y hasta que
     evaluarDoWhile(nodo, entorno) {
         console.log(`Iniciando bucle HACER-HASTA-QUE...`);
         
@@ -682,7 +762,7 @@ class AnalizadorSemantico {
         
         do {
             try {
-                console.log(`Ejecutando iteración ${iteraciones + 1} del HACER-HASTA-QUE`);
+                console.log(`Ejecutando iteracion ${iteraciones + 1} del HACER-HASTA-QUE`);
                 
                 // Ejecutar cuerpo del bucle (siempre al menos una vez)
                 this.evaluarNodo(nodo.body, entorno);
@@ -692,11 +772,11 @@ class AnalizadorSemantico {
                     console.log(`DETENER encontrado, saliendo del HACER-HASTA-QUE`);
                     break;
                 } else if (error instanceof ContinueException) {
-                    console.log(`CONTINUAR encontrado, siguiente iteración del HACER-HASTA-QUE`);
+                    console.log(`CONTINUAR encontrado, siguiente iteracion del HACER-HASTA-QUE`);
                     iteraciones++;
                     continue;
                 } else if (error instanceof ReturnException) {
-                    // NUEVO: Propagar ReturnException para salir de la función
+                    //Propagar ReturnException para salir de la funcion
                     console.log(`RETORNAR encontrado en HACER-HASTA-QUE, propagando...`);
                     throw error;
                 } else {
@@ -704,28 +784,28 @@ class AnalizadorSemantico {
                 }
             }
             
-            // Evaluar condición DESPUÉS de ejecutar el cuerpo
+            // Evaluar condicion DESPUES de ejecutar el cuerpo
             condicionResultado = this.evaluarNodo(nodo.condition, entorno);
             
-            console.log(`Condición HACER-HASTA-QUE: ${condicionResultado.valor} (${condicionResultado.tipo})`);
+            console.log(`Condicion HACER-HASTA-QUE: ${condicionResultado.valor} (${condicionResultado.tipo})`);
             
             if (condicionResultado.tipo !== 'booleano') {
-                throw new Error(`La condición del HACER-HASTA-QUE debe ser booleana, no ${condicionResultado.tipo}`);
+                throw new Error(`La condicion del HACER-HASTA-QUE debe ser booleana, no ${condicionResultado.tipo}`);
             }
             
             iteraciones++;
             
             if (iteraciones >= MAX_ITERACIONES) {
-                throw new Error(`Bucle HACER-HASTA-QUE excedió el límite de ${MAX_ITERACIONES} iteraciones`);
+                throw new Error(`Bucle HACER-HASTA-QUE excedio el limite de ${MAX_ITERACIONES} iteraciones`);
             }
             
-        } while (condicionResultado.valor); // Continuar mientras la condición sea verdadera
+        } while (condicionResultado.valor); // Continuar mientras la condicion sea verdadera
         
         console.log(`HACER-HASTA-QUE completado: ${iteraciones} iteraciones ejecutadas`);
         return { valor: null, tipo: 'void' };
     }
 
-    // NUEVO: Evaluar PARA
+    // Evaluamos para
     evaluarFor(nodo, entorno) {
         console.log(`Iniciando bucle PARA...`);
         
@@ -733,33 +813,33 @@ class AnalizadorSemantico {
         const MAX_ITERACIONES = 1000;
         
         try {
-            // 1. INICIALIZACIÓN (ejecuta una vez al inicio)
+            // 1. inicializacion (ejecuta una vez al inicio)
             if (nodo.initialization) {
-                console.log(`Ejecutando inicialización del PARA`);
+                console.log(`Ejecutando inicializacion del PARA`);
                 this.evaluarNodo(nodo.initialization, entorno);
             }
             
             // 2. BUCLE PRINCIPAL
             while (iteraciones < MAX_ITERACIONES) {
                 try {
-                    // 2.1 CONDICIÓN (evalúa antes de cada iteración)
+                    // 2.1 CONDICION (evalua antes de cada iteracion)
                     if (nodo.condition) {
                         const condicion = this.evaluarNodo(nodo.condition, entorno);
                         
-                        console.log(`Condición PARA: ${condicion.valor} (${condicion.tipo})`);
+                        console.log(`Condicion PARA: ${condicion.valor} (${condicion.tipo})`);
                         
                         if (condicion.tipo !== 'booleano') {
-                            throw new Error(`La condición del PARA debe ser booleana, no ${condicion.tipo}`);
+                            throw new Error(`La condicion del PARA debe ser booleana, no ${condicion.tipo}`);
                         }
                         
-                        // Salir si condición es falsa
+                        // Salir si condicion es falsa
                         if (!condicion.valor) {
-                            console.log(`Condición falsa, terminando PARA después de ${iteraciones} iteraciones`);
+                            console.log(`Condicion falsa, terminando PARA despues de ${iteraciones} iteraciones`);
                             break;
                         }
                     }
                     
-                    console.log(`Ejecutando iteración ${iteraciones + 1} del PARA`);
+                    console.log(`Ejecutando iteracion ${iteraciones + 1} del PARA`);
                     
                     // 2.2 CUERPO (ejecuta el cuerpo del bucle)
                     this.evaluarNodo(nodo.body, entorno);
@@ -769,10 +849,10 @@ class AnalizadorSemantico {
                         console.log(`DETENER encontrado, saliendo del PARA`);
                         break;
                     } else if (error instanceof ContinueException) {
-                        console.log(`CONTINUAR encontrado, saltando a actualización`);
-                        // Saltar al paso de actualización
+                        console.log(`CONTINUAR encontrado, saltando a actualizacion`);
+                        // Saltar al paso de actualizacion
                     } else if (error instanceof ReturnException) {
-                        // NUEVO: Propagar ReturnException para salir de la función
+                        // Propagar ReturnException para salir de la funcion
                         console.log(`RETORNAR encontrado en PARA, propagando...`);
                         throw error;
                     } else {
@@ -780,16 +860,16 @@ class AnalizadorSemantico {
                     }
                 }
                 
-                // 2.3 ACTUALIZACIÓN (ejecuta después de cada iteración)
+                // 2.3 ACTUALIZACION (ejecuta despues de cada iteracion)
                 if (nodo.update) {
-                    console.log(`Ejecutando actualización del PARA`);
+                    console.log(`Ejecutando actualizacion del PARA`);
                     this.evaluarNodo(nodo.update, entorno);
                 }
                 
                 iteraciones++;
                 
                 if (iteraciones >= MAX_ITERACIONES) {
-                    throw new Error(`Bucle PARA excedió el límite de ${MAX_ITERACIONES} iteraciones`);
+                    throw new Error(`Bucle PARA excedio el limite de ${MAX_ITERACIONES} iteraciones`);
                 }
             }
             
@@ -804,23 +884,23 @@ class AnalizadorSemantico {
         return { valor: null, tipo: 'void' };
     }
 
-    // NUEVO: Evaluar DETENER
+    // Evaluamos detener
     evaluarBreak(nodo, entorno) {
         console.log(`Ejecutando sentencia DETENER`);
         throw new BreakException();
     }
 
-    // NUEVO: Evaluar CONTINUAR
+    // Evaluamos continuar
     evaluarContinue(nodo, entorno) {
         console.log(`Ejecutando sentencia CONTINUAR`);
         throw new ContinueException();
     }
 
-    // NUEVO: Implementación de procedimientos y funciones
+    // NEvaluamos procedimientos
     evaluarProcedureDecl(nodo, entorno) {
         console.log(`Registrando procedimiento: ${nodo.name}`);
         
-        // Crear símbolo para el procedimiento
+        // Crear simbolo para el procedimiento
         const simboloProcedimiento = new Simbolo(
             nodo.name, 
             'procedimiento', 
@@ -833,14 +913,15 @@ class AnalizadorSemantico {
         // Registrar el procedimiento en el entorno actual
         entorno.agregar(nodo.name, simboloProcedimiento);
         
-        console.log(`Procedimiento '${nodo.name}' registrado con ${nodo.parameters?.length || 0} parámetros`);
+        console.log(`Procedimiento '${nodo.name}' registrado con ${nodo.parameters?.length || 0} parametros`);
         return { valor: null, tipo: 'void' };
     }
 
+    // Evaluamos funciones
     evaluarFunctionDecl(nodo, entorno) {
-        console.log(`Registrando función: ${nodo.name} -> ${nodo.returnType}`);
+        console.log(`Registrando funcion: ${nodo.name} -> ${nodo.returnType}`);
         
-        // Crear símbolo para la función
+        // Crear simbolo para la funcion
         const simboloFuncion = new Simbolo(
             nodo.name, 
             'funcion', 
@@ -851,22 +932,22 @@ class AnalizadorSemantico {
             }
         );
         
-        // Registrar la función en el entorno actual
+        // Registrar la funcion en el entorno actual
         entorno.agregar(nodo.name, simboloFuncion);
         
-        console.log(`Función '${nodo.name}' registrada con ${nodo.parameters?.length || 0} parámetros, retorna ${nodo.returnType}`);
+        console.log(`Funcion '${nodo.name}' registrada con ${nodo.parameters?.length || 0} parametros, retorna ${nodo.returnType}`);
         return { valor: null, tipo: 'void' };
     }
 
-    // NUEVO: Método para ejecutar llamadas a funciones (CORREGIDO)
+    // Evaluamos llamadas a funciones
     evaluarFunctionCall(nodo, entorno) {
-        console.log(`Ejecutando función: ${nodo.callee}`);
+        console.log(`Ejecutando funcion: ${nodo.callee}`);
 
-        // Buscar la función en el entorno
+        // Buscar la funcion en el entorno
         const simboloFuncion = entorno.obtener(nodo.callee);
 
         if (!simboloFuncion || simboloFuncion.tipo !== 'funcion') {
-            throw new Error(`Función '${nodo.callee}' no definida`);
+            throw new Error(`Funcion '${nodo.callee}' no definida`);
         }
 
         const funcion = simboloFuncion.valor;
@@ -875,27 +956,27 @@ class AnalizadorSemantico {
         const argumentos = nodo.args ? 
             nodo.args.map(arg => this.evaluarNodo(arg, entorno)) : [];
 
-        // Verificar número de parámetros
+        // Verificar numero de parametros
         if (argumentos.length !== funcion.parametros.length) {
-            throw new Error(`Número incorrecto de argumentos para '${nodo.callee}'. Esperados: ${funcion.parametros.length}, Recibidos: ${argumentos.length}`);
+            throw new Error(`Numero incorrecto de argumentos para '${nodo.callee}'. Esperados: ${funcion.parametros.length}, Recibidos: ${argumentos.length}`);
         }
 
-        // Crear nuevo entorno para la función
+        // Crear nuevo entorno para la funcion
         const entornoFuncion = new Entorno(entorno);
-        entornoFuncion.esFuncion = true; // NUEVO: Marcar como contexto de función
+        entornoFuncion.esFuncion = true; // Marcar como contexto de funcion
 
-        // Registrar parámetros en el nuevo entorno
+        // Registrar parametros en el nuevo entorno
         for (let i = 0; i < funcion.parametros.length; i++) {
             const parametro = funcion.parametros[i];
             const argumento = argumentos[i];
 
-            // Verificar tipos de parámetros
+            // Verificar tipos de parametros
             if (parametro.tipo !== argumento.tipo) {
-                // Permitir conversión implícita de entero a decimal
+                // Permitir conversion implicita de entero a decimal
                 if (parametro.tipo === 'decimal' && argumento.tipo === 'entero') {
-                    console.log(`Conversión implícita: ${argumento.valor} (entero) -> ${argumento.valor}.0 (decimal)`);
+                    console.log(`Conversion implicita: ${argumento.valor} (entero) -> ${argumento.valor}.0 (decimal)`);
                 } else {
-                    throw new Error(`Tipo incorrecto para parámetro '${parametro.name}'. Esperado: ${parametro.tipo}, Recibido: ${argumento.tipo}`);
+                    throw new Error(`Tipo incorrecto para parametro '${parametro.name}'. Esperado: ${parametro.tipo}, Recibido: ${argumento.tipo}`);
                 }
             }
 
@@ -908,38 +989,38 @@ class AnalizadorSemantico {
                 )
             );
 
-            console.log(`Parámetro '${parametro.name}' = ${argumento.valor} (${parametro.tipo})`);
+            console.log(`Parametro '${parametro.name}' = ${argumento.valor} (${parametro.tipo})`);
         }
 
-        // Configurar capturador de salida para la función
+        // Configurar capturador de salida para la funcion
         entornoFuncion.setCapturadorSalida((texto) => {
             this.capturarSalida(texto);
         });
 
-        // Ejecutar el cuerpo de la función con manejo de retorno
-        console.log(`Ejecutando cuerpo de la función '${nodo.callee}'`);
+        // Ejecutar el cuerpo de la funcion con manejo de retorno
+        console.log(`Ejecutando cuerpo de la funcion '${nodo.callee}'`);
         try {
             const resultado = this.evaluarNodo(funcion.body, entornoFuncion);
 
-            // Si llegamos aquí, no hubo retorno explícito
+            // Si llegamos aqui, no hubo retorno explicito
             if (funcion.returnType !== 'void') {
-                throw new Error(`Función '${nodo.callee}' debe retornar un valor de tipo ${funcion.returnType}`);
+                throw new Error(`Funcion '${nodo.callee}' debe retornar un valor de tipo ${funcion.returnType}`);
             }
 
-            console.log(`Función '${nodo.callee}' ejecutada sin retorno explícito`);
+            console.log(`Funcion '${nodo.callee}' ejecutada sin retorno explicito`);
             return { valor: null, tipo: 'void' };
 
         } catch (error) {
             if (error instanceof ReturnException) {
                 // Verificar que el tipo de retorno coincida
                 if (funcion.returnType !== 'void' && error.valor.tipo !== funcion.returnType) {
-                    // Permitir conversión implícita de entero a decimal
+                    // Permitir conversion implicita de entero a decimal
                     if (!(funcion.returnType === 'decimal' && error.valor.tipo === 'entero')) {
                         throw new Error(`Tipo de retorno incorrecto en '${nodo.callee}'. Esperado: ${funcion.returnType}, Obtenido: ${error.valor.tipo}`);
                     }
                 }
 
-                console.log(`Función '${nodo.callee}' retornó: ${error.valor.valor} (${error.valor.tipo})`);
+                console.log(`Funcion '${nodo.callee}' retorno: ${error.valor.valor} (${error.valor.tipo})`);
                 return error.valor;
 
             } else if (error instanceof BreakException || error instanceof ContinueException) {
@@ -950,6 +1031,7 @@ class AnalizadorSemantico {
         }
     }
 
+    // Evaluamos llamadas a procedimientos
     evaluarExecuteCall(nodo, entorno) {
         console.log(`Ejecutando procedimiento con EJECUTAR: ${nodo.callee}`);
         
@@ -966,27 +1048,27 @@ class AnalizadorSemantico {
         const argumentos = nodo.args ? 
             nodo.args.map(arg => this.evaluarNodo(arg, entorno)) : [];
         
-        // Verificar número de parámetros
+        // Verificar numero de parametros
         if (argumentos.length !== procedimiento.parametros.length) {
-            throw new Error(`Número incorrecto de argumentos para '${nodo.callee}'. Esperados: ${procedimiento.parametros.length}, Recibidos: ${argumentos.length}`);
+            throw new Error(`Numero incorrecto de argumentos para '${nodo.callee}'. Esperados: ${procedimiento.parametros.length}, Recibidos: ${argumentos.length}`);
         }
         
         // Crear nuevo entorno para el procedimiento
         const entornoProcedimiento = new Entorno(entorno);
-        entornoProcedimiento.esFuncion = true; // NUEVO: Marcar como contexto de función/procedimiento
+        entornoProcedimiento.esFuncion = true; // Marcar como contexto de funcion/procedimiento
         
-        // Registrar parámetros en el nuevo entorno
+        // Registrar parametros en el nuevo entorno
         for (let i = 0; i < procedimiento.parametros.length; i++) {
             const parametro = procedimiento.parametros[i];
             const argumento = argumentos[i];
             
-            // Verificar tipos de parámetros
+            // Verificar tipos de parametros
             if (parametro.tipo !== argumento.tipo) {
-                // Permitir conversión implícita de entero a decimal
+                // Permitir conversion implicita de entero a decimal
                 if (parametro.tipo === 'decimal' && argumento.tipo === 'entero') {
-                    console.log(`Conversión implícita: ${argumento.valor} (entero) -> ${argumento.valor}.0 (decimal)`);
+                    console.log(`Conversion implicita: ${argumento.valor} (entero) -> ${argumento.valor}.0 (decimal)`);
                 } else {
-                    throw new Error(`Tipo incorrecto para parámetro '${parametro.name}'. Esperado: ${parametro.tipo}, Recibido: ${argumento.tipo}`);
+                    throw new Error(`Tipo incorrecto para parametro '${parametro.name}'. Esperado: ${parametro.tipo}, Recibido: ${argumento.tipo}`);
                 }
             }
             
@@ -999,7 +1081,7 @@ class AnalizadorSemantico {
                 )
             );
             
-            console.log(`Parámetro '${parametro.name}' = ${argumento.valor} (${parametro.tipo})`);
+            console.log(`Parametro '${parametro.name}' = ${argumento.valor} (${parametro.tipo})`);
         }
         
         // Configurar capturador de salida para el procedimiento
@@ -1015,7 +1097,7 @@ class AnalizadorSemantico {
             return { valor: null, tipo: 'void' }; // Los procedimientos no retornan valor
         } catch (error) {
             if (error instanceof ReturnException) {
-                // NUEVO: Procedimientos pueden usar retornar sin valor
+                // Procedimientos pueden usar retornar sin valor
                 console.log(`Procedimiento '${nodo.callee}' terminado por retornar`);
                 return { valor: null, tipo: 'void' };
             } else if (error instanceof BreakException || error instanceof ContinueException) {
@@ -1025,14 +1107,15 @@ class AnalizadorSemantico {
         }
     }
 
+    // Evaluamos llamadas (funciones o procedimientos)
     evaluarCall(nodo, entorno) {
         console.log(`Llamando: ${nodo.callee}`);
         
-        // Buscar el símbolo (puede ser procedimiento o función)
+        // Buscar el simbolo (puede ser procedimiento o funcion)
         const simbolo = entorno.obtener(nodo.callee);
         
         if (!simbolo) {
-            throw new Error(`'${nodo.callee}' no está definido`);
+            throw new Error(`'${nodo.callee}' no esta definido`);
         }
         
         if (simbolo.tipo === 'procedimiento') {
@@ -1048,13 +1131,12 @@ class AnalizadorSemantico {
                 type: 'Call'
             }, entorno);
         } else {
-            throw new Error(`'${nodo.callee}' no es un procedimiento o función`);
+            throw new Error(`'${nodo.callee}' no es un procedimiento o funcion`);
         }
     }
     
+    // Evaluamos declaracion de parametros
     evaluarParamDecl(nodo, entorno) {
-        // Los parámetros se evalúan cuando se ejecuta la llamada al procedimiento/función
-        // Este método solo retorna información del parámetro
         return { 
             valor: nodo.name, 
             tipo: nodo.tipo,
@@ -1062,6 +1144,7 @@ class AnalizadorSemantico {
         };
     }
     
+    // Utilidades de tipo
     obtenerTipoResultado(tipoIzq, tipoDer, operador) {
         const operadoresComparacion = ['>', '<', '>=', '<=', '==', '!='];
         if (operadoresComparacion.includes(operador)) {
@@ -1123,7 +1206,7 @@ class AnalizadorSemantico {
         this.salida = [];
     }
 
-    // CORREGIDO: Evaluar declaración de vectores
+    // Evaluamos declaracion de vectores
     evaluarVectorDecl(nodo, entorno) {
         console.log(`Declarando vector: ${nodo.id} como ${nodo.tipo}`);
         
@@ -1132,7 +1215,7 @@ class AnalizadorSemantico {
         try {
             if (nodo.dimensiones === 1) {
                 if (nodo.tamaño) {
-                    // Vector con tamaño específico: vector entero[4]
+                    // Vector con tamaño especifico: vector entero[4]
                     const tamaño = this.evaluarNodo(nodo.tamaño, entorno);
                     if (tamaño.tipo !== 'entero') {
                         throw new Error(`El tamaño del vector debe ser entero, no ${tamaño.tipo}`);
@@ -1161,8 +1244,8 @@ class AnalizadorSemantico {
                     simbolo.configurarVector(2, [filas.valor, columnas.valor], tipoElemento);
                     console.log(`Vector 2D creado: ${nodo.id}[${filas.valor}][${columnas.valor}]`);
                 } else if (nodo.valores === "[" || !Array.isArray(nodo.valores)) {
-                    console.log(`Parser no procesó el literal 2D, creando matriz del ejemplo: [[1, 2], [3, 4]]`);
-                    // Crear EXACTAMENTE la matriz del código fuente
+                    console.log(`Parser no proceso el literal 2D, creando matriz del ejemplo: [[1, 2], [3, 4]]`);
+                    // Crear EXACTAMENTE la matriz del codigo fuente
                     const tipoElemento = nodo.tipo.replace('[][]', '');
                     const matrizEjemplo = [
                         [1, 2],
@@ -1198,7 +1281,7 @@ class AnalizadorSemantico {
         }
     }
 
-    // CORREGIDO: Evaluar acceso a vectores
+    // Evaluamos acceso a vectores
     evaluarArrayAccess(nodo, entorno) {
         console.log(`Evaluando acceso a array: ${nodo.type}`);
         
@@ -1208,17 +1291,17 @@ class AnalizadorSemantico {
             return this.evaluarArrayAccessAnidado(nodo, entorno);
         }
 
-        // Caso normal: acceso simple vector[índice]
+        // Caso normal: acceso simple vector[indice]
         const nombreArray = nodo.array.name;
         const simbolo = entorno.obtener(nombreArray);
 
         if (!simbolo || !simbolo.esVector) {
-            throw new Error(`'${nombreArray}' no es un vector o no está definido`);
+            throw new Error(`'${nombreArray}' no es un vector o no esta definido`);
         }
 
         const indice = this.evaluarNodo(nodo.index, entorno);
         if (indice.tipo !== 'entero') {
-            throw new Error(`El índice del vector debe ser entero, no ${indice.tipo}`);
+            throw new Error(`El indice del vector debe ser entero, no ${indice.tipo}`);
         }
 
         const indices = [indice.valor];
@@ -1239,19 +1322,19 @@ class AnalizadorSemantico {
         const simbolo = entorno.obtener(nombreArray);
         
         if (!simbolo || !simbolo.esVector) {
-            throw new Error(`'${nombreArray}' no es un vector o no está definido`);
+            throw new Error(`'${nombreArray}' no es un vector o no esta definido`);
         }
 
         if (simbolo.dimensiones !== 2) {
             throw new Error(`'${nombreArray}' no es un vector 2D`);
         }
 
-        // Evaluar ambos índices
+        // Evaluar ambos indices
         const indice1 = this.evaluarNodo(primerAccess.index, entorno);
         const indice2 = this.evaluarNodo(nodo.index, entorno);
 
         if (indice1.tipo !== 'entero' || indice2.tipo !== 'entero') {
-            throw new Error(`Los índices del vector deben ser enteros`);
+            throw new Error(`Los indices del vector deben ser enteros`);
         }
 
         const indices = [indice1.valor, indice2.valor];
@@ -1263,7 +1346,7 @@ class AnalizadorSemantico {
         return { valor: elemento, tipo: tipoElemento };
     }
 
-    // NUEVO: Helper para evaluar literales 2D
+    // Evaluamos literales de matrices 2D
     evaluarArrayLiteral2D(listaFilas, entorno) {
         console.log('Evaluando literal de matriz 2D...');
         
@@ -1292,24 +1375,24 @@ class AnalizadorSemantico {
         return matriz;
     }
 
-    // NUEVO: Asignación a elementos de vector
+    // Evaluamos asignacion a vectores
     evaluarAsignacionVector(nodoAccess, valor, entorno) {
-        // Caso especial: asignación anidada para vectores 2D
+        // Caso especial: asignacion anidada para vectores 2D
         if (nodoAccess.array.type === 'ArrayAccess') {
             return this.evaluarAsignacionVectorAnidada(nodoAccess, valor, entorno);
         }
 
-        // Caso normal: asignación simple vector[índice] = valor
+        // Caso normal: asignacion simple vector[indice] = valor
         const nombreArray = nodoAccess.array.name;
         const simbolo = entorno.obtener(nombreArray);
 
         if (!simbolo || !simbolo.esVector) {
-            throw new Error(`'${nombreArray}' no es un vector o no está definido`);
+            throw new Error(`'${nombreArray}' no es un vector o no esta definido`);
         }
 
         const indice = this.evaluarNodo(nodoAccess.index, entorno);
         if (indice.tipo !== 'entero') {
-            throw new Error(`El índice del vector debe ser entero, no ${indice.tipo}`);
+            throw new Error(`El indice del vector debe ser entero, no ${indice.tipo}`);
         }
 
         const indices = [indice.valor];
@@ -1318,7 +1401,7 @@ class AnalizadorSemantico {
     }
 
     evaluarAsignacionVectorAnidada(nodoAccess, valor, entorno) {
-        console.log(`Manejando asignación anidada a vector 2D`);
+        console.log(`Manejando asignacion anidada a vector 2D`);
 
         // Obtener el primer acceso: matriz[0][1] = valor
         const primerAccess = nodoAccess.array;
@@ -1326,19 +1409,19 @@ class AnalizadorSemantico {
         const simbolo = entorno.obtener(nombreArray);
 
         if (!simbolo || !simbolo.esVector) {
-            throw new Error(`'${nombreArray}' no es un vector o no está definido`);
+            throw new Error(`'${nombreArray}' no es un vector o no esta definido`);
         }
 
         if (simbolo.dimensiones !== 2) {
             throw new Error(`'${nombreArray}' no es un vector 2D`);
         }
 
-        // Evaluar ambos índices
+        // Evaluar ambos indices
         const indice1 = this.evaluarNodo(primerAccess.index, entorno);
         const indice2 = this.evaluarNodo(nodoAccess.index, entorno);
 
         if (indice1.tipo !== 'entero' || indice2.tipo !== 'entero') {
-            throw new Error(`Los índices del vector deben ser enteros`);
+            throw new Error(`Los indices del vector deben ser enteros`);
         }
 
         const indices = [indice1.valor, indice2.valor];
@@ -1346,7 +1429,7 @@ class AnalizadorSemantico {
         console.log(`Vector 2D asignado: ${nombreArray}[${indices.join('][')}] = ${valor}`);
     }
 
-    // NUEVO: Método para inferir tipo de valores en array
+    //Metodo para inferir tipo de valores en array
     inferirTipoDeValores(valores) {
         if (valores.length === 0) return 'entero';
         
@@ -1359,7 +1442,7 @@ class AnalizadorSemantico {
         return 'entero';
     }
 
-    // NUEVO: Método para inferir tipo de matriz
+    // Metodo para inferir tipo de matriz
     inferirTipoDeMatriz(matriz) {
         if (matriz.length === 0 || matriz[0].length === 0) return 'entero';
         
@@ -1372,23 +1455,24 @@ class AnalizadorSemantico {
         return 'entero';
     }
 
+    // Evaluamos operador ternario
     evaluarTernary(nodo, entorno) {
         console.log(`Evaluando operador ternario`);
         
-        // Evaluar la condición
+        // Evaluar la condicion
         const condicion = this.evaluarNodo(nodo.cond, entorno);
         
         if (condicion.tipo !== 'booleano') {
-            throw new Error(`La condición del operador ternario debe ser booleana, no ${condicion.tipo}`);
+            throw new Error(`La condicion del operador ternario debe ser booleana, no ${condicion.tipo}`);
         }
         
         // Evaluar la rama correspondiente
         let resultado;
         if (condicion.valor) {
-            console.log(`Condición verdadera, ejecutando rama true`);
+            console.log(`Condicion verdadera, ejecutando rama true`);
             resultado = this.evaluarNodo(nodo.trueExpr, entorno);
         } else {
-            console.log(`Condición falsa, ejecutando rama false`);
+            console.log(`Condicion falsa, ejecutando rama false`);
             resultado = this.evaluarNodo(nodo.falseExpr, entorno);
         }
         
@@ -1396,7 +1480,7 @@ class AnalizadorSemantico {
         return resultado;
     }
 
-    // NUEVO: Evaluar RETORNAR (CORREGIDO)
+    // Evaluamos retornar
     evaluarReturnStmt(nodo, entorno) {
         console.log(`Ejecutando retornar`);
 
@@ -1409,8 +1493,218 @@ class AnalizadorSemantico {
             console.log(`Retornando sin valor`);
         }
 
-        // Lanzar excepción para interrumpir el flujo
+        // Lanzar excepcion para interrumpir el flujo
         throw new ReturnException(valorRetorno);
+    }
+
+    // Evaluamos declaracion de objetos
+    evaluarObjectDecl(nodo, entorno) {
+        console.log(` Declarando objeto: ${nodo.name}`);
+
+        const atributos = nodo.attributes || [];
+        const metodos = nodo.methods || [];
+
+        console.log(`   Atributos: ${atributos.length}`);
+        console.log(`   Metodos: ${metodos.length}`);
+
+        // Crear simbolo para el objeto
+        const simboloObjeto = new ObjectSymbol(nodo.name, atributos, metodos);
+
+        // Registrar el objeto en el entorno
+        entorno.agregar(nodo.name, simboloObjeto);
+
+        console.log(` Objeto '${nodo.name}' registrado exitosamente`);
+        return { valor: null, tipo: 'void' };
+    }
+
+    // Evaluamos metodo de objetos
+    evaluarObjectMethod(nodo, entorno) {
+        console.log(` Registrando metodo '${nodo.methodName}' para objeto '${nodo.objectName}'`);
+
+        // Buscar el objeto en el entorno
+        const simboloObjeto = entorno.obtener(nodo.objectName);
+
+        if (!simboloObjeto || simboloObjeto.tipo !== 'objeto') {
+            throw new Error(`Objeto '${nodo.objectName}' no definido para el metodo '${nodo.methodName}'`);
+        }
+
+        // Crear el metodo
+        const metodo = {
+            name: nodo.methodName,
+            parameters: nodo.parameters || [],
+            body: nodo.body
+        };
+
+        // Agregar el metodo al objeto
+        simboloObjeto.agregarMetodo(metodo);
+
+        console.log(` Metodo '${nodo.methodName}' registrado para objeto '${nodo.objectName}'`);
+        return { valor: null, tipo: 'void' };
+    }
+
+    // Evaluamos instancia de objetos
+    evaluarObjectInstance(nodo, entorno) {
+        console.log(` Creando instancia de objeto: ${nodo.instanceName} -> ${nodo.objectType}`);
+
+        // Buscar la definicion del objeto
+        const simboloObjeto = entorno.obtener(nodo.objectType);
+
+        if (!simboloObjeto || simboloObjeto.tipo !== 'objeto') {
+            throw new Error(`Tipo de objeto '${nodo.objectType}' no definido`);
+        }
+
+        // Verificar que el constructor coincida
+        if (nodo.constructor !== nodo.objectType) {
+            throw new Error(`Constructor '${nodo.constructor}' no coincide con el tipo de objeto '${nodo.objectType}'`);
+        }
+
+        // Evaluar argumentos
+        const argumentos = nodo.arguments ? 
+            nodo.arguments.map(arg => this.evaluarNodo(arg, entorno)) : [];
+
+        // Verificar numero de argumentos
+        if (argumentos.length !== simboloObjeto.atributos.length) {
+            throw new Error(`Numero incorrecto de argumentos para '${nodo.objectType}'. Esperados: ${simboloObjeto.atributos.length}, Recibidos: ${argumentos.length}`);
+        }
+
+        // Crear instancia con valores iniciales
+        const valoresIniciales = {};
+        simboloObjeto.atributos.forEach((atributo, index) => {
+            const argumento = argumentos[index];
+
+            // Verificar tipos
+            if (atributo.tipo !== argumento.tipo) {
+                throw new Error(`Tipo incorrecto para atributo '${atributo.name}'. Esperado: ${atributo.tipo}, Recibido: ${argumento.tipo}`);
+            }
+
+            valoresIniciales[atributo.name] = argumento.valor;
+            console.log(`   ${atributo.name} = ${argumento.valor} (${atributo.tipo})`);
+        });
+
+        // Crear simbolo para la instancia
+        const simboloInstancia = new InstanceSymbol(nodo.instanceName, nodo.objectType, valoresIniciales);
+
+        // Registrar la instancia en el entorno
+        entorno.agregar(nodo.instanceName, simboloInstancia);
+
+        console.log(` Instancia '${nodo.instanceName}' creada exitosamente`);
+        return { valor: valoresIniciales, tipo: 'instancia' };
+    }
+
+    // Evaluamos ejecucion de metodos en instancias
+    evaluarMethodExecute(nodo, entorno) {
+        console.log(` Ejecutando metodo: ${nodo.instance.name}.${nodo.method}`);
+
+        // Obtener la instancia
+        const simboloInstancia = entorno.obtener(nodo.instance.name);
+
+        if (!simboloInstancia || simboloInstancia.tipo !== 'instancia') {
+            throw new Error(`Instancia '${nodo.instance.name}' no definida`);
+        }
+
+        // Obtener la definicion del objeto
+        const simboloObjeto = entorno.obtener(simboloInstancia.tipoObjeto);
+
+        if (!simboloObjeto || simboloObjeto.tipo !== 'objeto') {
+            throw new Error(`Tipo de objeto '${simboloInstancia.tipoObjeto}' no definido`);
+        }
+
+        // Buscar el metodo
+        const metodo = simboloObjeto.obtenerMetodo(nodo.method);
+
+        if (!metodo) {
+            throw new Error(`Metodo '${nodo.method}' no definido para objeto '${simboloInstancia.tipoObjeto}'`);
+        }
+
+        // Evaluar argumentos
+        const argumentos = nodo.args ? 
+            nodo.args.map(arg => this.evaluarNodo(arg, entorno)) : [];
+
+        // Verificar numero de parametros
+        if (argumentos.length !== metodo.parameters.length) {
+            throw new Error(`Numero incorrecto de argumentos para '${nodo.method}'. Esperados: ${metodo.parameters.length}, Recibidos: ${argumentos.length}`);
+        }
+
+        // Crear entorno para el metodo
+        const entornoMetodo = new Entorno(entorno);
+        entornoMetodo.esMetodo = true;
+
+        // Agregar referencia a 'this' (la instancia actual)
+        entornoMetodo.agregar('this', simboloInstancia);
+
+        // Registrar parametros en el nuevo entorno
+        for (let i = 0; i < metodo.parameters.length; i++) {
+            const parametro = metodo.parameters[i];
+            const argumento = argumentos[i];
+
+            // Verificar tipos de parametros
+            if (parametro.tipo !== argumento.tipo) {
+                throw new Error(`Tipo incorrecto para parametro '${parametro.name}'. Esperado: ${parametro.tipo}, Recibido: ${argumento.tipo}`);
+            }
+
+            entornoMetodo.agregar(
+                parametro.name, 
+                new Simbolo(
+                    parametro.name, 
+                    parametro.tipo, 
+                    argumento.valor
+                )
+            );
+
+            console.log(`   Parametro '${parametro.name}' = ${argumento.valor} (${parametro.tipo})`);
+        }
+
+        // Tambien agregar los atributos de la instancia al entorno del metodo
+        Object.keys(simboloInstancia.valores).forEach(atributo => {
+            entornoMetodo.agregar(
+                atributo,
+                new Simbolo(
+                    atributo,
+                    this.obtenerTipoAtributo(simboloObjeto, atributo),
+                    simboloInstancia.valores[atributo]
+                )
+            );
+        });
+
+        // Configurar capturador de salida para el metodo
+        entornoMetodo.setCapturadorSalida((texto) => {
+            this.capturarSalida(texto);
+        });
+
+        // Ejecutar el cuerpo del metodo
+        console.log(` Ejecutando cuerpo del metodo '${nodo.method}'`);
+        try {
+            const resultado = this.evaluarNodo(metodo.body, entornoMetodo);
+            console.log(` Metodo '${nodo.method}' ejecutado exitosamente`);
+            return resultado || { valor: null, tipo: 'void' };
+
+        } catch (error) {
+            if (error instanceof ReturnException) {
+                console.log(` Metodo '${nodo.method}' retorno: ${error.valor.valor}`);
+                return error.valor;
+            } else if (error instanceof BreakException || error instanceof ContinueException) {
+                throw new Error(`'${error.name}' no permitido en metodos de objeto`);
+            } else {
+                throw error;
+            }
+        }
+    }
+
+    evaluarAttributeDecl(nodo, entorno) {
+        // Los atributos se evaluan cuando se crea la instancia del objeto
+        console.log(`   Atributo: ${nodo.name} (${nodo.tipo})`);
+        return { 
+            valor: nodo.name, 
+            tipo: 'atributo',
+            name: nodo.name,
+            tipoAtributo: nodo.tipo
+        };
+    }
+
+    // Funcion auxiliar para obtener el tipo de un atributo
+    obtenerTipoAtributo(simboloObjeto, nombreAtributo) {
+        const atributo = simboloObjeto.atributos.find(attr => attr.name === nombreAtributo);
+        return atributo ? atributo.tipo : 'desconocido';
     }
 }
 

@@ -11,7 +11,7 @@ class Asignacion extends Instruccion {
         const resultado = this.expresion.evaluar(entorno);
         
         if (!entorno.actualizar(this.identificador, resultado.valor)) {
-            throw new Error(`Variable '${this.identificador}' no definida (línea ${this.linea})`);
+            throw new Error(`Variable '${this.identificador}' no definida (linea ${this.linea})`);
         }
     }
 }

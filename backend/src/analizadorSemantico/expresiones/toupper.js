@@ -10,7 +10,7 @@ class ToUpper extends Expresion {
         const expr = this.expresion.evaluar(entorno);
         
         if (expr.tipo !== 'cadena') {
-            throw new Error(`Error en toupper: Se esperaba cadena pero se recibió ${expr.tipo} (línea ${this.linea})`);
+            throw new Error(`Error en toupper: Se esperaba cadena pero se recibio ${expr.tipo} (linea ${this.linea})`);
         }
         
         return {

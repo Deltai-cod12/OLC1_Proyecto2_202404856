@@ -19,7 +19,7 @@ class Declaracion extends Instruccion {
             
             // Verificar tipo
             if (valor.tipo !== this.tipo && this.tipo !== 'desconocido') {
-                throw new Error(`Error de tipo: Se esperaba ${this.tipo} pero se recibió ${valor.tipo} para variable ${id} (línea ${this.linea})`);
+                throw new Error(`Error de tipo: Se esperaba ${this.tipo} pero se recibio ${valor.tipo} para variable ${id} (linea ${this.linea})`);
             }
             
             entorno.agregar(id, {

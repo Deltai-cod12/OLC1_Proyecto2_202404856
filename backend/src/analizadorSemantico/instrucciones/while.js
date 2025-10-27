@@ -12,7 +12,7 @@ class While extends Instruccion {
             const condicion = this.condicion.evaluar(entorno);
             
             if (condicion.tipo !== 'booleano') {
-                throw new Error(`La condición del MIENTRAS debe ser booleana, no ${condicion.tipo} (línea ${this.linea})`);
+                throw new Error(`La condicion del MIENTRAS debe ser booleana, no ${condicion.tipo} (linea ${this.linea})`);
             }
             
             if (!condicion.valor) {

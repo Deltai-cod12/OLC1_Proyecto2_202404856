@@ -16,13 +16,13 @@ class OperacionUnaria extends Expresion {
             case '!':
                 return this.not(expr);
             default:
-                throw new Error(`Operador unario '${this.operador}' no implementado (línea ${this.linea})`);
+                throw new Error(`Operador unario '${this.operador}' no implementado (linea ${this.linea})`);
         }
     }
     
     negativo(expr) {
         if (expr.tipo !== 'entero' && expr.tipo !== 'decimal') {
-            throw new Error(`Tipo no numérico para negación: ${expr.tipo} (línea ${this.linea})`);
+            throw new Error(`Tipo no numerico para negacion: ${expr.tipo} (linea ${this.linea})`);
         }
         return {
             valor: -expr.valor,
@@ -32,7 +32,7 @@ class OperacionUnaria extends Expresion {
     
     not(expr) {
         if (expr.tipo !== 'booleano') {
-            throw new Error(`Tipo no booleano para NOT: ${expr.tipo} (línea ${this.linea})`);
+            throw new Error(`Tipo no booleano para NOT: ${expr.tipo} (linea ${this.linea})`);
         }
         return {
             valor: !expr.valor,

@@ -9,7 +9,7 @@ class Identificador extends Expresion {
     evaluar(entorno) {
         const simbolo = entorno.obtener(this.nombre);
         if (!simbolo) {
-            throw new Error(`Error semántico: Variable '${this.nombre}' no definida (línea ${this.linea})`);
+            throw new Error(`Error semantico: Variable '${this.nombre}' no definida (linea ${this.linea})`);
         }
         return {
             valor: simbolo.valor,

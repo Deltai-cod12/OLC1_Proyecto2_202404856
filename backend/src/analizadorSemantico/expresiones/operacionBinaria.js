@@ -28,7 +28,7 @@ class OperacionBinaria extends Expresion {
             case '&&': return this.and(izquierda, derecha);
             case '||': return this.or(izquierda, derecha);
             default:
-                throw new Error(`Operador '${this.operador}' no implementado (línea ${this.linea})`);
+                throw new Error(`Operador '${this.operador}' no implementado (linea ${this.linea})`);
         }
     }
     
@@ -52,7 +52,7 @@ class OperacionBinaria extends Expresion {
                 tipo: 'decimal'
             };
         }
-        throw new Error(`Tipos incompatibles para suma: ${izq.tipo} + ${der.tipo} (línea ${this.linea})`);
+        throw new Error(`Tipos incompatibles para suma: ${izq.tipo} + ${der.tipo} (linea ${this.linea})`);
     }
     
     restar(izq, der) {
@@ -67,7 +67,7 @@ class OperacionBinaria extends Expresion {
     }
     
     multiplicar(izq, der) {
-        this.validarNumeros(izq, der, 'multiplicación');
+        this.validarNumeros(izq, der, 'multiplicacion');
         if (izq.tipo === 'entero' && der.tipo === 'entero') {
             return { valor: izq.valor * der.valor, tipo: 'entero' };
         }
@@ -78,9 +78,9 @@ class OperacionBinaria extends Expresion {
     }
     
     dividir(izq, der) {
-        this.validarNumeros(izq, der, 'división');
+        this.validarNumeros(izq, der, 'division');
         if (der.valor === 0) {
-            throw new Error(`División por cero (línea ${this.linea})`);
+            throw new Error(`Division por cero (linea ${this.linea})`);
         }
         return { 
             valor: Number(izq.valor) / Number(der.valor), 
@@ -89,7 +89,7 @@ class OperacionBinaria extends Expresion {
     }
     
     modulo(izq, der) {
-        this.validarEnteros(izq, der, 'módulo');
+        this.validarEnteros(izq, der, 'modulo');
         return { 
             valor: izq.valor % der.valor, 
             tipo: 'entero' 
@@ -119,7 +119,7 @@ class OperacionBinaria extends Expresion {
     }
     
     menor(izq, der) {
-        this.validarNumeros(izq, der, 'comparación');
+        this.validarNumeros(izq, der, 'comparacion');
         return { 
             valor: izq.valor < der.valor, 
             tipo: 'booleano' 
@@ -127,7 +127,7 @@ class OperacionBinaria extends Expresion {
     }
     
     menorIgual(izq, der) {
-        this.validarNumeros(izq, der, 'comparación');
+        this.validarNumeros(izq, der, 'comparacion');
         return { 
             valor: izq.valor <= der.valor, 
             tipo: 'booleano' 
@@ -135,7 +135,7 @@ class OperacionBinaria extends Expresion {
     }
     
     mayor(izq, der) {
-        this.validarNumeros(izq, der, 'comparación');
+        this.validarNumeros(izq, der, 'comparacion');
         return { 
             valor: izq.valor > der.valor, 
             tipo: 'booleano' 
@@ -143,7 +143,7 @@ class OperacionBinaria extends Expresion {
     }
     
     mayorIgual(izq, der) {
-        this.validarNumeros(izq, der, 'comparación');
+        this.validarNumeros(izq, der, 'comparacion');
         return { 
             valor: izq.valor >= der.valor, 
             tipo: 'booleano' 
@@ -169,19 +169,19 @@ class OperacionBinaria extends Expresion {
     validarNumeros(izq, der, operacion) {
         if ((izq.tipo !== 'entero' && izq.tipo !== 'decimal') || 
             (der.tipo !== 'entero' && der.tipo !== 'decimal')) {
-            throw new Error(`Tipos no numéricos para ${operacion}: ${izq.tipo} y ${der.tipo} (línea ${this.linea})`);
+            throw new Error(`Tipos no numericos para ${operacion}: ${izq.tipo} y ${der.tipo} (linea ${this.linea})`);
         }
     }
     
     validarEnteros(izq, der, operacion) {
         if (izq.tipo !== 'entero' || der.tipo !== 'entero') {
-            throw new Error(`Tipos no enteros para ${operacion}: ${izq.tipo} y ${der.tipo} (línea ${this.linea})`);
+            throw new Error(`Tipos no enteros para ${operacion}: ${izq.tipo} y ${der.tipo} (linea ${this.linea})`);
         }
     }
     
     validarBooleanos(izq, der, operacion) {
         if (izq.tipo !== 'booleano' || der.tipo !== 'booleano') {
-            throw new Error(`Tipos no booleanos para ${operacion}: ${izq.tipo} y ${der.tipo} (línea ${this.linea})`);
+            throw new Error(`Tipos no booleanos para ${operacion}: ${izq.tipo} y ${der.tipo} (linea ${this.linea})`);
         }
     }
 }

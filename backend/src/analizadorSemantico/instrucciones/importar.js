@@ -8,7 +8,7 @@ class Importar extends Instruccion {
     
     evaluar(entorno) {
         console.log(`Importando: ${this.archivo}`);
-        // Implementar lógica de importación
+        // Implementar logica de importacion
     }
 }
 

@@ -1,8 +1,8 @@
 const parser = require('../gramatica/parser');
 const AnalizadorSemantico = require('../analizadorSemantico/analizador_semantico');
-const GraphvizGenerator = require('../graphviz/graphviz_generator'); // NUEVO
+const GraphvizGenerator = require('../graphviz/graphviz_generator'); //
 
-const graphvizGenerator = new GraphvizGenerator(); // NUEVO
+const graphvizGenerator = new GraphvizGenerator(); //
 
 const analyzeCode = (req, res) => {
   try {
@@ -11,11 +11,11 @@ const analyzeCode = (req, res) => {
     if (!code || typeof code !== 'string') {
       return res.status(400).json({
         success: false,
-        message: 'El código es requerido y debe ser una cadena de texto'
+        message: 'El codigo es requerido y debe ser una cadena de texto'
       });
     }
 
-    console.log('Código recibido para análisis:', code);
+    console.log('Codigo recibido para analisis:', code);
 
     // Array para almacenar los tokens encontrados
     const tokensEncontrados = [];
@@ -23,9 +23,9 @@ const analyzeCode = (req, res) => {
     let salidaConsola = "";
 
     try {
-      console.log('INICIANDO ANÁLISIS LÉXICO Y SINTÁCTICO');
+      console.log('INICIANDO ANALISIS LEXICO Y SINTACTICO');
       
-      // Método 1: Intentar el enfoque de tu prueba original
+      // Metodo 1: Intentar el enfoque de tu prueba original
       let ast;
       
       // Verificar si el parser tiene una clase Parser
@@ -49,7 +49,7 @@ const analyzeCode = (req, res) => {
                 columna: yy_.yylloc ? yy_.yylloc.first_column : 0
               };
               tokensEncontrados.push(tokenInfo);
-              console.log(` TOKEN: "${tokenInfo.token}" (${tokenInfo.tipo}) - Línea ${tokenInfo.linea}, Col ${tokenInfo.columna}`);
+              console.log(` TOKEN: "${tokenInfo.token}" (${tokenInfo.tipo}) - Linea ${tokenInfo.linea}, Col ${tokenInfo.columna}`);
             }
             
             return token;
@@ -59,19 +59,19 @@ const analyzeCode = (req, res) => {
         ast = parserInstance.parse(code);
         
       } else {
-        // Método 2: Parser directo (como en tu respuesta actual)
+        // Metodo 2: Parser directo (como en tu respuesta actual)
         console.log('Usando parser directo');
         ast = parser.parse(code);
         
-        // Para este caso, intentemos extraer tokens del AST o generar una lista básica
+        // Para este caso, intentemos extraer tokens del AST o generar una lista basica
         generarTokensDesdeCodigo(code, tokensEncontrados);
       }
       
-      console.log('Análisis léxico y sintáctico completado');
+      console.log('Analisis lexico y sintactico completado');
       console.log('AST generado:', JSON.stringify(ast, null, 2));
       
-      // EJECUTAR ANÁLISIS SEMÁNTICO
-      console.log('INICIANDO ANÁLISIS SEMÁNTICO Y EJECUCIÓN');
+      // EJECUTAR ANALISIS SEMANTICO
+      console.log('INICIANDO ANALISIS SEMANTICO Y EJECUCION');
       let resultadoSemantico = null;
       
       try {
@@ -79,24 +79,24 @@ const analyzeCode = (req, res) => {
         resultadoSemantico = analizadorSemantico.analizar(ast);
         
         if (resultadoSemantico.exito) {
-          console.log('Análisis semántico completado exitosamente');
-          salidaConsola = resultadoSemantico.salida || "Ejecución completada sin salida";
+          console.log('Analisis semantico completado exitosamente');
+          salidaConsola = resultadoSemantico.salida || "Ejecucion completada sin salida";
         } else {
-          console.log('Error en análisis semántico:', resultadoSemantico.error);
+          console.log('Error en analisis semantico:', resultadoSemantico.error);
           errors.push({
             no: errors.length + 1,
-            tipoError: 'Semántico',
+            tipoError: 'Semantico',
             mensaje: resultadoSemantico.error,
             linea: 1,
             columna: 1
           });
-          salidaConsola = resultadoSemantico.salida || "Error durante la ejecución";
+          salidaConsola = resultadoSemantico.salida || "Error durante la ejecucion";
         }
       } catch (errorSemantico) {
-        console.log('Error durante análisis semántico:', errorSemantico.message);
+        console.log('Error durante analisis semantico:', errorSemantico.message);
         errors.push({
           no: errors.length + 1,
-          tipoError: 'Semántico',
+          tipoError: 'Semantico',
           mensaje: errorSemantico.message,
           linea: 1,
           columna: 1
@@ -107,17 +107,17 @@ const analyzeCode = (req, res) => {
       // Estructura de respuesta exitosa
       const response = {
         success: true,
-        message: 'Análisis completado exitosamente',
+        message: 'Analisis completado exitosamente',
         tokens: tokensEncontrados,
         errors: errors,
-        ast: ast, // ✅ AST incluido en la respuesta
+        ast: ast, //  AST incluido en la respuesta
         consoleOutput: [
-          '✓ Análisis léxico completado',
-          '✓ Análisis sintáctico completado',
-          `✓ Tokens procesados: ${tokensEncontrados.length}`,
-          `✓ Errores encontrados: ${errors.length}`,
-          '✓ AST generado correctamente',
-          '✓ Análisis semántico completado',
+          'Analisis lexico completado',
+          'Analisis sintactico completado',
+          `Tokens procesados: ${tokensEncontrados.length}`,
+          `Errores encontrados: ${errors.length}`,
+          'AST generado correctamente',
+          'Analisis semantico completado',
           '--- SALIDA DE CONSOLA ---',
           ...salidaConsola.split('\n')
         ],
@@ -129,13 +129,13 @@ const analyzeCode = (req, res) => {
       res.json(response);
       
     } catch (parseError) {
-      console.log('Error durante el análisis:', parseError.message);
+      console.log('Error durante el analisis:', parseError.message);
       
-      // Capturar información del error del parser
+      // Capturar informacion del error del parser
       if (parseError.hash) {
         const errorInfo = {
           no: errors.length + 1,
-          tipoError: 'Sintáctico',
+          tipoError: 'Sintactico',
           mensaje: parseError.message,
           linea: parseError.hash.line || parseError.hash.loc?.first_line || 1,
           columna: parseError.hash.loc?.first_column || 1,
@@ -149,14 +149,14 @@ const analyzeCode = (req, res) => {
       // Respuesta con errores pero tokens encontrados hasta el momento
       const response = {
         success: false,
-        message: 'Error en el análisis',
+        message: 'Error en el analisis',
         tokens: tokensEncontrados,
         errors: errors,
         ast: null,
         consoleOutput: [
-          `✓ Tokens procesados: ${tokensEncontrados.length}`,
-          `✗ Error en análisis: ${parseError.message}`,
-          `✗ Errores encontrados: ${errors.length}`
+          `Tokens procesados: ${tokensEncontrados.length}`,
+          `Error en analisis: ${parseError.message}`,
+          `Errores encontrados: ${errors.length}`
         ],
         salidaConsola: `Error de sintaxis: ${parseError.message}`
       };
@@ -181,14 +181,14 @@ const analyzeCode = (req, res) => {
       }],
       consoleOutput: [
         '✗ Error interno del servidor',
-        '✗ No se pudo completar el análisis'
+        '✗ No se pudo completar el analisis'
       ],
       salidaConsola: `Error del servidor: ${error.message}`
     });
   }
 };
 
-// NUEVO: Controlador para generar gráfico del AST
+// Controlador para generar grafico del AST
 const generateASTGraph = async (req, res) => {
   try {
     const { ast } = req.body;
@@ -196,19 +196,19 @@ const generateASTGraph = async (req, res) => {
     if (!ast) {
       return res.status(400).json({
         success: false,
-        error: 'No se proporcionó AST para generar el gráfico'
+        error: 'No se proporciono AST para generar el grafico'
       });
     }
 
-    console.log('🔄 Generando gráfico del AST...');
+    console.log(' Generando grafico del AST...');
 
     const result = await graphvizGenerator.generateASTImage(ast);
     
-    console.log('✅ Gráfico del AST generado exitosamente');
+    console.log(' Grafico del AST generado exitosamente');
     res.json(result);
 
   } catch (error) {
-    console.error('❌ Error generando gráfico AST:', error);
+    console.error(' Error generando grafico AST:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -216,7 +216,7 @@ const generateASTGraph = async (req, res) => {
   }
 };
 
-// Función para generar tokens básicos desde el código cuando no podemos capturarlos del lexer
+// Funcion para generar tokens basicos desde el codigo cuando no podemos capturarlos del lexer
 function generarTokensDesdeCodigo(codigo, tokensArray) {
   const lineas = codigo.split('\n');
   
@@ -236,7 +236,7 @@ function generarTokensDesdeCodigo(codigo, tokensArray) {
       lineaProcesada = lineaProcesada.replace(patron, `@@COMPUESTO_${index}@@`);
     });
     
-    // Dividir la línea en tokens básicos
+    // Dividir la linea en tokens basicos
     const tokensLinea = lineaProcesada.split(/(\s+|;|\(|\)|\{|\}|=|,|\+|-|\*|\/|==|!=|<=|>=|<|>|\.|:|"|')/)
       .filter(token => token && token.trim() !== '');
     
@@ -260,16 +260,16 @@ function generarTokensDesdeCodigo(codigo, tokensArray) {
       };
       
       tokensArray.push(tokenInfo);
-      console.log(` TOKEN GENERADO: "${tokenInfo.token}" (${tokenInfo.tipo}) - Línea ${tokenInfo.linea}, Col ${tokenInfo.columna}`);
+      console.log(` TOKEN GENERADO: "${tokenInfo.token}" (${tokenInfo.tipo}) - Linea ${tokenInfo.linea}, Col ${tokenInfo.columna}`);
       
       columna += tokenFinal.length;
     });
   });
 }
 
-// Función auxiliar para determinar el tipo de token
+// Funcion auxiliar para determinar el tipo de token
 function determinarTipoToken(token) {
-  // Palabras reservadas básicas
+  // Palabras reservadas basicas
   const palabrasReservadas = [
     'entero', 'decimal', 'booleano', 'caracter', 'cadena', 'vector',
     'si', 'o', 'de', 'lo', 'contrario', 'mientras', 'para', 'hacer', 
@@ -284,7 +284,7 @@ function determinarTipoToken(token) {
     'con valor', 'con metodo', 'ingresar objeto', 'de lo contrario'
   ];
   
-  // Operadores y símbolos
+  // Operadores y simbolos
   const operadores = [
     '+', '-', '*', '/', '%', '^', '=', '==', '!=', '<', '>', '<=', '>=', 
     '&&', '||', '!', '++', '--', '->'
@@ -299,7 +299,7 @@ function determinarTipoToken(token) {
     '( entero )', '( decimal )', '( caracter )', '( cadena )'
   ];
   
-  // Primero verificar tokens compuestos (los más específicos primero)
+  // Primero verificar tokens compuestos (los mas especificos primero)
   for (const compuesto of tokensCompuestos) {
     if (token.toLowerCase().includes(compuesto.toLowerCase())) {
       return 'Palabra Reservada';
@@ -330,12 +330,12 @@ function determinarTipoToken(token) {
   else if (delimitadores.includes(token)) {
     return 'Delimitador';
   } 
-  // Verificar números
+  // Verificar numeros
   else if (/^-?\d+$/.test(token)) {
-    return 'Número Entero';
+    return 'Numero Entero';
   } 
   else if (/^-?\d+\.\d+$/.test(token)) {
-    return 'Número Decimal';
+    return 'Numero Decimal';
   } 
   // Verificar cadenas de texto (entre comillas)
   else if ((token.startsWith('"') && token.endsWith('"')) || 
@@ -362,5 +362,5 @@ function determinarTipoToken(token) {
 
 module.exports = {
   analyzeCode,
-  generateASTGraph // NUEVO: exportar la nueva función
+  generateASTGraph // exportar la nueva funcion
 };

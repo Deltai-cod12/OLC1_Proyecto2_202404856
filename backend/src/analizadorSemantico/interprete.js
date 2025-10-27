@@ -14,17 +14,17 @@ class Interprete {
                 this.entornoGlobal.setCapturadorSalida(capturadorSalida);
             }
             
-            // Verificar que el AST tenga el método evaluar
+            // Verificar que el AST tenga el metodo evaluar
             if (typeof ast.evaluar !== 'function') {
-                throw new Error("El AST no tiene método evaluar");
+                throw new Error("El AST no tiene metodo evaluar");
             }
             
             // Ejecutar el programa
             ast.evaluar(this.entornoGlobal);
             
-            console.log(" Ejecución completada exitosamente");
+            console.log(" Ejecucion completada exitosamente");
         } catch (error) {
-            console.error(` Error durante la ejecución: ${error.message}`);
+            console.error(` Error durante la ejecucion: ${error.message}`);
             throw error;
         }
     }

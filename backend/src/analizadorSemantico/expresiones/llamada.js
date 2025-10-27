@@ -11,7 +11,7 @@ class Llamada extends Expresion {
         // Evaluar argumentos
         const argumentosEvaluados = this.args.map(arg => arg.evaluar(entorno));
         
-        // Lógica para llamadas a funciones/procedimientos
+        // Logica para llamadas a funciones/procedimientos
         // Por ahora retornamos un valor por defecto
         console.log(`Llamada a ${this.callee} con args:`, argumentosEvaluados);
         return { valor: null, tipo: 'desconocido' };

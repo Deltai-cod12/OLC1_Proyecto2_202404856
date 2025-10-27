@@ -5,7 +5,7 @@ class Nodo {
     }
     
     evaluar(entorno) {
-        throw new Error("Método evaluar() no implementado");
+        throw new Error("Metodo evaluar() no implementado");
     }
 }
 

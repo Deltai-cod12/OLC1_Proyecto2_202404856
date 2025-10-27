@@ -10,17 +10,17 @@ class For extends Instruccion {
     }
     
     evaluar(entorno) {
-        // Ejecutar inicialización
+        // Ejecutar inicializacion
         if (this.inicializacion) {
             this.inicializacion.evaluar(entorno);
         }
         
         while (true) {
-            // Verificar condición
+            // Verificar condicion
             if (this.condicion) {
                 const cond = this.condicion.evaluar(entorno);
                 if (cond.tipo !== 'booleano') {
-                    throw new Error(`La condición del PARA debe ser booleana, no ${cond.tipo} (línea ${this.linea})`);
+                    throw new Error(`La condicion del PARA debe ser booleana, no ${cond.tipo} (linea ${this.linea})`);
                 }
                 if (!cond.valor) {
                     break;
@@ -34,13 +34,13 @@ class For extends Instruccion {
                 if (error.message === 'BREAK') {
                     break;
                 } else if (error.message === 'CONTINUE') {
-                    // Continuar con la actualización
+                    // Continuar con la actualizacion
                 } else {
                     throw error;
                 }
             }
             
-            // Ejecutar actualización
+            // Ejecutar actualizacion
             if (this.actualizacion) {
                 this.actualizacion.evaluar(entorno);
             }
