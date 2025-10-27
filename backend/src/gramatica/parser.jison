@@ -54,6 +54,15 @@ function getType(node) {
         return getSymbolType(node.name);
     }
     
+    // FIX CRÍTICO: Para operaciones binarias de comparación
+    if (node.type === 'BinaryOp') {
+        const comparisonOps = ['>', '<', '>=', '<=', '==', '!=', '&&', '||'];
+        if (comparisonOps.includes(node.operator)) {
+            return 'booleano'; // ← ESTA LÍNEA FALTA EN TU CÓDIGO
+        }
+        return node.resultType || 'desconocido';
+    }
+    
     // Para accesos a miembros y arrays
     if (node.type === 'MemberAccess' || node.type === 'ArrayAccess') {
         return node.dataType || getSymbolType(node.array?.name || node.objeto?.name) || 'desconocido';
@@ -62,11 +71,6 @@ function getType(node) {
     // Para casteos
     if (node.type === 'Cast') {
         return node.targetType;
-    }
-    
-    // Para operaciones binarias
-    if (node.type === 'BinaryOp') {
-        return node.resultType || 'desconocido';
     }
     
     // Para operaciones unarias
@@ -178,6 +182,12 @@ function checkTernaryTypes(cond, trueExpr, falseExpr) {
     const condType = getType(cond);
     const trueType = getType(trueExpr);
     const falseType = getType(falseExpr);
+    
+    console.log("DEBUG checkTernaryTypes:");
+    console.log("  cond:", cond);
+    console.log("  condType:", condType);
+    console.log("  cond.operator:", cond.operator);
+    console.log("  cond.type:", cond.type);
     
     // Verificar condición
     if (condType !== 'desconocido') {
@@ -606,7 +616,6 @@ function checkSumTypes(left, right) {
 
 %start programa
 
-%right '?' ':'   // Operador ternario
 %left OR         // ||
 %left AND        // &&
 %right '!'       // NOT
@@ -617,6 +626,7 @@ function checkSumTypes(left, right) {
 %left '+' '-'
 %right CAST_ENTERO CAST_DECIMAL CAST_CARACTER CAST_CADENA
 %left '[' ']'
+%right '?' ':'   // Operador ternario
 
 /* PRECEDENCIA PARA SENTENCIAS DE CONTROL - ACTUALIZADA */
 %nonassoc SI_SIMPLE
@@ -1448,7 +1458,7 @@ expresion_unaria
     ;
 
 expresion_ternaria
-    : expresion_ternaria '?' expresion ':' expresion_ternaria { 
+    : expresion '?' expresion ':' expresion_ternaria { 
           const ternaryType = checkTernaryTypes($1, $3, $5);
           $$ = makeNode('Ternary', { 
               cond: $1, 

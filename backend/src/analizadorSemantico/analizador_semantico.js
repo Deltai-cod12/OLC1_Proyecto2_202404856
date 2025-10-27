@@ -233,6 +233,13 @@ class AnalizadorSemantico {
                         this.prepararNodos([nodo.defaultValue]);
                     }
                     break;
+                case 'Ternary':
+                    nodo.evaluar = (entorno) => this.evaluarTernary(nodo, entorno);
+                    if (nodo.cond) this.prepararNodos([nodo.cond]);
+                    if (nodo.trueExpr) this.prepararNodos([nodo.trueExpr]);
+                    if (nodo.falseExpr) this.prepararNodos([nodo.falseExpr]);
+                    break;
+
                     
                 default:
                     console.log(`Tipo de nodo no manejado: ${nodo.type}`);
@@ -1219,6 +1226,30 @@ class AnalizadorSemantico {
         }
         if (typeof primerElemento === 'boolean') return 'booleano';
         return 'entero';
+    }
+
+    evaluarTernary(nodo, entorno) {
+        console.log(`Evaluando operador ternario`);
+        
+        // Evaluar la condición
+        const condicion = this.evaluarNodo(nodo.cond, entorno);
+        
+        if (condicion.tipo !== 'booleano') {
+            throw new Error(`La condición del operador ternario debe ser booleana, no ${condicion.tipo}`);
+        }
+        
+        // Evaluar la rama correspondiente
+        let resultado;
+        if (condicion.valor) {
+            console.log(`Condición verdadera, ejecutando rama true`);
+            resultado = this.evaluarNodo(nodo.trueExpr, entorno);
+        } else {
+            console.log(`Condición falsa, ejecutando rama false`);
+            resultado = this.evaluarNodo(nodo.falseExpr, entorno);
+        }
+        
+        console.log(`Ternario resultado: ${resultado.valor} (${resultado.tipo})`);
+        return resultado;
     }
 }
 
